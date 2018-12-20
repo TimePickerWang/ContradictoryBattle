@@ -20,7 +20,7 @@
 
 
 # 二、java集合
-![collection](images/collection_1544689155_27250.jpg)
+![collection](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/collection_1544689155_27250.jpg?raw=true)
 
 
 ## 1.HashMap
@@ -213,7 +213,7 @@ private static int hugeCapacity(int minCapacity) {
 
 # 三、java并发
 **J.U.C包的构成**
-![J.U.C](images/juc_1544758685_14921.jpg)
+![J.U.C](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/juc_1544758685_14921.jpg?raw=true)
 
 
 ## 1.并发容器
@@ -402,7 +402,7 @@ public abstract class AbstractQueuedSynchronizer
     ...
 }
 ```
-![CLH](images/clh_1545278417_29342.jpg)
+![CLH](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/clh_1545278417_29342.jpg?raw=true)
 &#160;&#160;
 　　AbstractQueuedSynchronizer内部维持了一个上图所示的等待队列和一个state变量，等待队列由上面代码中的Node对象组成，其实是一个双向链表。现在以非公平的ReentrantLock为例，一般的加锁流程如下：
 　　1.假设现在没有进行任何加锁的操作，某时刻A线程调用ReentrantLock的lock()方法进行加锁，state最初为0，首先利用CAS操作将state变为1，并将当前线程设置为独占线程。
@@ -493,7 +493,7 @@ rejectHandler:拒绝处理任务时的策略，如果workQueue满了，且没有
 
 
 ### 3.3 线程池的状态
-![pool](images/pool_1544939327_6001.jpg)
+![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/pool_1544939327_6001.jpg?raw=true)
 
 SHUTDOWN：当线程池处于该状态时，不会接收新的任务，但会处理workQueue中阻塞的任务。在线程池处于RUNNINT状态时，调用shutdown()方法会使线程池进入该状态。
 
