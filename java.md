@@ -106,13 +106,13 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
 &#160;&#160;
 **注：代码中的两个常量DEFAULT_INITIAL_CAPACITY和MIN_TREEIFY_CAPACITY都是指的table的长度(Node<K,V>数组的长度)，而不是table中Node<K,V>的数量，而扩容是判断的是size和threshold的大小，此时size指的是Node<K,V>的数量**
 
-（1）调用put方法时首先要通过key字段计算hash码（hash码为int类型），然后将计算出的hash码和该hash码右移16位后的值做'^'运算（混合原始哈希码的高位和低位，以此来加大低位的随机性，可参考[JDK 源码中 HashMap 的 hash 方法原理是什么？](https://www.zhihu.com/question/20733617/answer/111577937)），所的的结果赋给Node<K,V>对象hash字段。注意，当key字段是null，赋给Node<K,V>对象hash字段值为0，这也表明当存储的key为null时，该Node<K,V>对象始终在table第0个桶上。
-（2）将（1）中计算出的hash值和哈希表table（即Node<K,V>数组 ）的长度(n-1)做'&'运算来确定新对象在table中的位置i。如果table为空或者table的长度为0需调用resize()来进行扩容。
-（3）如果位置i上为null，直接创建新的Node<K,V>对象放在table中的i位置上。
-（4）如果位置i上不为null，进行如下操作：  
-　　（4.1）比较该位置原Node对象的hash值与key值和新的hash值、key值是否相等，相等则把旧Node进行替换。
-　　（4.2）如果该位置的Node对象和新的key值或者hash值不相等，判断该位置的Node对象是否TreeNode类型，是的话在树中找到和hash值与key相等的节点，找到则替换，没找到则插入新的TreeNode到树中。
-　　（4.3）如果该位置的Node对象和新的key值或者hash值不相等，且该位置的Node对象也不是TreeNode类型，则遍历该位置的Node对象组成的链表。如果在链表中找到了相等的Node对象，把旧Node进行替换。如果没找到，将新的对象插入到链表的尾部，插入后要判断两个条件：**该链表的长度是否大于8（TREEIFY_THRESHOLD），table的长度是否大于或等于64（MIN_TREEIFY_CAPACITY）**，如果两个条件都满足，则将该链表转为树；如果**该链表的长度大于8，table的长度小于64**，则调用resize()方法。
+（1）调用put方法时首先要通过key字段计算hash码（hash码为int类型），然后将计算出的hash码和该hash码右移16位后的值做'^'运算（混合原始哈希码的高位和低位，以此来加大低位的随机性，可参考[JDK 源码中 HashMap 的 hash 方法原理是什么？](https://www.zhihu.com/question/20733617/answer/111577937)），所的的结果赋给Node<K,V>对象hash字段。注意，当key字段是null，赋给Node<K,V>对象hash字段值为0，这也表明当存储的key为null时，该Node<K,V>对象始终在table第0个桶上。  
+（2）将（1）中计算出的hash值和哈希表table（即Node<K,V>数组 ）的长度(n-1)做'&'运算来确定新对象在table中的位置i。如果table为空或者table的长度为0需调用resize()来进行扩容。  
+（3）如果位置i上为null，直接创建新的Node<K,V>对象放在table中的i位置上。  
+（4）如果位置i上不为null，进行如下操作：   
+　　（4.1）比较该位置原Node对象的hash值与key值和新的hash值、key值是否相等，相等则把旧Node进行替换。  
+　　（4.2）如果该位置的Node对象和新的key值或者hash值不相等，判断该位置的Node对象是否TreeNode类型，是的话在树中找到和hash值与key相等的节点，找到则替换，没找到则插入新的TreeNode到树中。  
+　　（4.3）如果该位置的Node对象和新的key值或者hash值不相等，且该位置的Node对象也不是TreeNode类型，则遍历该位置的Node对象组成的链表。如果在链表中找到了相等的Node对象，把旧Node进行替换。如果没找到，将新的对象插入到链表的尾部，插入后要判断两个条件：**该链表的长度是否大于8（TREEIFY_THRESHOLD），table的长度是否大于或等于64（MIN_TREEIFY_CAPACITY）**，如果两个条件都满足，则将该链表转为树；如果**该链表的长度大于8，table的长度小于64**，则调用resize()方法。  
 （5）如果table中找到了和新的hash值与key相等的Node，进行替换后需要返回原Node的value值；如果没有找到相应的Node，在新增节点后需要 ++modCount（table的修改次数），++size操作（当前table的Node个数），并判断size和threshold（需进行扩容的阈值，初始为DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY，即12）的大小，当size>threshold时，需要调用resize()进行扩容。**扩容就是创建一个新的table，其长度和threshold阈值都增长为原来的2倍，然后遍历原table，将其中的每一个Node分配到新table对应的位置上（这就是rehash，在多线程的情况下rehash可能出现死循环，这里不做讨论）。**
 
 
@@ -120,10 +120,9 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
 ```java
 tab[i = (n - 1) & hash]
 ```
-&#160;&#160;
-1.效果上等同于取模运算，但效率比取模高
-　　在通过上式计算元素在table中的位置时，算法实际就是取模，即hash%length（table的长度），但计算机中直接取模效率不如位运算，因此源码中优化成了hash&(length-1)，而hash%length==hash&(length-1)的前提是length是2的n次方。
-2.减少碰撞
+1.效果上等同于取模运算，但效率比取模高  
+　　在通过上式计算元素在table中的位置时，算法实际就是取模，即hash%length（table的长度），但计算机中直接取模效率不如位运算，因此源码中优化成了hash&(length-1)，而hash%length==hash&(length-1)的前提是length是2的n次方。  
+2.减少碰撞  
 　　由于length是2的n次方，hash&(length-1)时候，每一位都能  &1（2的次幂减1后二进制末尾都是1），也就是和……1111111进行与运算，只要hash足够乱，产生碰撞的可能性就越小。
 
 
@@ -201,13 +200,13 @@ private static int hugeCapacity(int minCapacity) {
 }
 ```
 &#160;&#160;
-　　以上代码可以看到：在它们在添加第一个元素后会出现两种完全不同的情况：如果是调用无参的构造方法，添加第一个元素后List会自动增长到10的长度。如果是调用new ArrayList(0)，添加第一个元素后List的长度是1。
-　　**扩容规则：**
-　　从上面也可以看出：若原List的长度为n，则添加一个元素后会计算一下新List可能的长度为**1.5n（取整）**
-　　1.此时如果1.5n<(n+1)，则新List的长度在原List的长度上加1，即（n+1）
-　　2.如果1.5n>List的最大容量MAX_ARRAY_SIZE，会再判断（n+1）和MAX_ARRAY_SIZE的大小，如果（n+1）大，新List的长度增长为Integer.MAX_VALUE，否则为MAX_ARRAY_SIZE。
-　　3.如果 (n+1) < 1.5n < MAX_ARRAY_SIZE，那么新Lis长度为1.5n。
-　　4.把原List复制到扩容后的List中，把新元素添加进去。
+　　以上代码可以看到：在它们在添加第一个元素后会出现两种完全不同的情况：如果是调用无参的构造方法，添加第一个元素后List会自动增长到10的长度。如果是调用new ArrayList(0)，添加第一个元素后List的长度是1。  
+　　**扩容规则：**  
+　　从上面也可以看出：若原List的长度为n，则添加一个元素后会计算一下新List可能的长度为**1.5n（取整）**  
+　　1.此时如果1.5n<(n+1)，则新List的长度在原List的长度上加1，即（n+1）  
+　　2.如果1.5n>List的最大容量MAX_ARRAY_SIZE，会再判断（n+1）和MAX_ARRAY_SIZE的大小，如果（n+1）大，新List的长度增长为Integer.MAX_VALUE，否则为MAX_ARRAY_SIZE。  
+　　3.如果 (n+1) < 1.5n < MAX_ARRAY_SIZE，那么新Lis长度为1.5n。  
+　　4.把原List复制到扩容后的List中，把新元素添加进去。  
 　　**ArrayList移除元素**：ArrayList在移除元素时也会新建一个组数，然后将原数组的对象复制到新数组中。
 
 
@@ -230,14 +229,14 @@ private static int hugeCapacity(int minCapacity) {
 
 
 
-缺点：
-1.对list做写操作的时候需要做拷贝，很消耗内存，当元素较多时可能会造成YoungGC或者FullGC。
+缺点：  
+1.对list做写操作的时候需要做拷贝，很消耗内存，当元素较多时可能会造成YoungGC或者FullGC。  
 2.不能用于实时读，只能保证最终的一致性。适用于读多写少的场景。
 
 
 ### 1.2 ConcurrentHashMap
 &#160;&#160;
-　　ConcurrentHashMap是线程安全的的Map容器，在JDK 1.8之前的版本采用的是分段锁的机制来提高并发度，后由于JDK 的synchronzied做了很多的优化，因此JDK 1.8舍弃了之前的segment分段锁，直接采用CAS机制+synchronzied来支持并发操作。
+　　ConcurrentHashMap是线程安全的的Map容器，在JDK 1.8之前的版本采用的是分段锁的机制来提高并发度，后由于JDK 的synchronzied做了很多的优化，因此JDK 1.8舍弃了之前的segment分段锁，直接采用CAS机制+synchronzied来支持并发操作。  
 　　ConcurrentHashMap和HashMap的底层很相似，也是Node<K,V>类型的数组，只不过在值val和指向下一个节点的指针next字段上加了volatile进行修饰。
 
 ```java
@@ -338,9 +337,9 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
 }
 ```
 &#160;&#160;
-　　ConcurrentHashMap在put操作上和HashMap差别不多，主要差别在多了一些同步的机制：
-　　1.首先也要通过key值来计算hash码。然后判断table是否为空，table为空时，需要调用initTable()进行初始化。
-　　2.然后也是通过(n - 1) & hash来确定新元素在table中的位置，当该位置为null时，通过CAS方式来创建新的Node<K,V>对象，并放在table中的i位置上，这一步不需要加锁。
+　　ConcurrentHashMap在put操作上和HashMap差别不多，主要差别在多了一些同步的机制：  
+　　1.首先也要通过key值来计算hash码。然后判断table是否为空，table为空时，需要调用initTable()进行初始化。  
+　　2.然后也是通过(n - 1) & hash来确定新元素在table中的位置，当该位置为null时，通过CAS方式来创建新的Node<K,V>对象，并放在table中的i位置上，这一步不需要加锁。  
 　　3.如果该位置不为空，需要对该位置的桶加锁，后续的操作和HashMap类似，这里不再详细讨论。
 
 
@@ -404,18 +403,18 @@ public abstract class AbstractQueuedSynchronizer
 ```
 ![CLH](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/clh_1545278417_29342.jpg?raw=true)
 &#160;&#160;
-　　AbstractQueuedSynchronizer内部维持了一个上图所示的等待队列和一个state变量，等待队列由上面代码中的Node对象组成，其实是一个双向链表。现在以非公平的ReentrantLock为例，一般的加锁流程如下：
-　　1.假设现在没有进行任何加锁的操作，某时刻A线程调用ReentrantLock的lock()方法进行加锁，state最初为0，首先利用CAS操作将state变为1，并将当前线程设置为独占线程。
-　　2.当再有线程来进行加锁操作时，先会判断state是否为0，为0则进行第1部操作。
-　　这时很显然state不为0，接着再判断此时的此事的线程是否是当前的独占线程，如果是，即现在进行加锁的线程仍然是A线程，则把state加1，这也说明为什么ReentrantLock是可从入锁。释放锁时，直到state的值变为0时，锁才能够被完全释放。
+　　AbstractQueuedSynchronizer内部维持了一个上图所示的等待队列和一个state变量，等待队列由上面代码中的Node对象组成，其实是一个双向链表。现在以非公平的ReentrantLock为例，一般的加锁流程如下：  
+　　1.假设现在没有进行任何加锁的操作，某时刻A线程调用ReentrantLock的lock()方法进行加锁，state最初为0，首先利用CAS操作将state变为1，并将当前线程设置为独占线程。  
+　　2.当再有线程来进行加锁操作时，先会判断state是否为0，为0则进行第1部操作。  
+　　这时很显然state不为0，接着再判断此时的此事的线程是否是当前的独占线程，如果是，即现在进行加锁的线程仍然是A线程，则把state加1，这也说明为什么ReentrantLock是可从入锁。释放锁时，直到state的值变为0时，锁才能够被完全释放。  
 　　如果现在加锁的是另一个线程B，则new一个Node对象，并将线程B赋值为Node对象的thread字段。接着会判断此时等待队列的尾节点是否为null，如果不为null，则将该节点插入到等待队列的尾部。很显然此时等待队列的尾节点就是null，因此会new一个头节点，此时头节点就是尾节点，然后该Node赋值为头节点的后继节点和队列的尾节点，当再有新的线程尝试加锁时会直接在队列的尾部添加新的Node。
 
 
 ### 2.2 ReentrantLock
-**ReentrantLock和synchronized的区别**
-　　1.ReentrantLock可以指定是公平锁还是非公平锁，而synchronized只能是公平锁。
-　　2.使用ReentrantLock时，提供了Condition类，可以分组调用signal()或await()方法，实现选择性通知。
-　　3.提供能够中断等待锁的线程的机制，lock.lockInterruptibly()。
+**ReentrantLock和synchronized的区别**  
+　　1.ReentrantLock可以指定是公平锁还是非公平锁，而synchronized只能是公平锁。  
+　　2.使用ReentrantLock时，提供了Condition类，可以分组调用signal()或await()方法，实现选择性通知。  
+　　3.提供能够中断等待锁的线程的机制，lock.lockInterruptibly()。  
 
 ### 2.3 ReentrantReadWriteLock
 
@@ -431,8 +430,8 @@ public abstract class AbstractQueuedSynchronizer
 
 ### 2.6 CyclicBarrier
 &#160;&#160;
-**CyclicBarrier和CountDownLatch的区别**：
-　　1.CountDownLatch的计数器只能使用一次；CyclicBarrier的计数器可以使用reset()重置，循环使用。
+**CyclicBarrier和CountDownLatch的区别**：  
+　　1.CountDownLatch的计数器只能使用一次；CyclicBarrier的计数器可以使用reset()重置，循环使用。  
 　　2.CountDownLatch描述的是1个或多个线程等待其它线程的关系；CyclicBarrier描述的是多个线程相互等待，直到满足条件后才能继续执行后续操作。
 
 
@@ -443,9 +442,9 @@ public abstract class AbstractQueuedSynchronizer
 ## 3.线程池
 
 ### 3.1 线程池的优点
-1. 重用存在的线程，减少对象创建、消亡的开销，性能佳。
-2. 可有效的控制最大并发线程数，提高系统资源利用率，同时可以避免过多资源竞争，避免阻塞。
-3. 提供定时执行、定期执行、单线程、并发数控制等功能。
+1. 重用存在的线程，减少对象创建、消亡的开销，性能佳。  
+2. 可有效的控制最大并发线程数，提高系统资源利用率，同时可以避免过多资源竞争，避免阻塞。  
+3. 提供定时执行、定期执行、单线程、并发数控制等功能。  
 
 
 
@@ -471,23 +470,23 @@ rejectHandler:拒绝处理任务时的策略，如果workQueue满了，且没有
 
 #### 3.2.1 corePoolSize、maximumPoolSize和workQueue间的关系
 &#160;&#160;
-　　如果运行的线程数少于corePoolSize，即使线程池中有空闲的线程，也会创建新的线程来处理任务；
-　　如果运行的线程数大于等于corePoolSize，小于maximumPoolSize，只有当workQueue满的时候才会创建新的线程处理任务；
-　　如果corePoolSize=maximumPoolSize，则线程池的大小是固定的。如果有新的任务提交且workQueue没满，就把任务放到workQueue里面，等待有空闲线程之后从workQueue里取出进行处理；
-　　如果运行的线程数量大于maximumPoolSize，且workQueue已满，通过拒绝策略的参数制定策略去出来任务；
+　　如果运行的线程数少于corePoolSize，即使线程池中有空闲的线程，也会创建新的线程来处理任务；  
+　　如果运行的线程数大于等于corePoolSize，小于maximumPoolSize，只有当workQueue满的时候才会创建新的线程处理任务；  
+　　如果corePoolSize=maximumPoolSize，则线程池的大小是固定的。如果有新的任务提交且workQueue没满，就把任务放到workQueue里面，等待有空闲线程之后从workQueue里取出进行处理；  
+　　如果运行的线程数量大于maximumPoolSize，且workQueue已满，通过拒绝策略的参数制定策略去出来任务；  
 　　如果需要降低系统消耗，可以设置较大的workQueue容量和较小的线程池容量，会降低线程处理任务的吞吐量。
 
 
 #### 3.2.2 workQueue的三种处理方式
 &#160;&#160;
-　　直接切换：基于SynchronousQueue
-　　使用无界队列：基于LinkedBlockingQueue，线程池中能创建的最大线程数是corePoolSize，maximumPoolSize不会起作用。当线程池中所有核心线程都在运行时，新的任务提交后放到workQueue中。
-　　使用有界队列：基于ArrayBlockingQueue，将线程池中能创建的最大线程数限制为maximumPoolSize，可以降低资源消耗，但因为线程池和workQueue的容量都有限，会使线程池对线程调度变得更困难。
+　　直接切换：基于SynchronousQueue  
+　　使用无界队列：基于LinkedBlockingQueue，线程池中能创建的最大线程数是corePoolSize，maximumPoolSize不会起作用。当线程池中所有核心线程都在运行时，新的任务提交后放到workQueue中。  
+　　使用有界队列：基于ArrayBlockingQueue，将线程池中能创建的最大线程数限制为maximumPoolSize，可以降低资源消耗，但因为线程池和workQueue的容量都有限，会使线程池对线程调度变得更困难。  
 
 
 #### 3.2.3 线程池的合理配置
 &#160;&#160;
-　　CPU密集型任务，就要尽量压榨CPU，参考值可以设为$n_{cpu} + 1$
+　　CPU密集型任务，就要尽量压榨CPU，参考值可以设为$n_{cpu} + 1$  
 　　IO密集型任务，参考值可以设为$2n_{cpu}$
 
 
@@ -529,8 +528,8 @@ Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公
 
 ### 4.1 Spring与线程安全
 &#160;&#160;
-　　Spring中默认的bean都是单例的，那么是怎么保证线程安全的呢？
-　　是因为我们交由spring管理的大多数对象都是无状态的对象（即没有在bean中声明有状态的实例变量或类变量，平时使用的dao、service、controller等都是无状态对象），我们使用时只是简单的使用，并不涉及到修改bean内部的属性，因此不会出现多个线程修改同一个变量的场景。
+　　Spring中默认的bean都是单例的，那么是怎么保证线程安全的呢？  
+　　是因为我们交由spring管理的大多数对象都是无状态的对象（即没有在bean中声明有状态的实例变量或类变量，平时使用的dao、service、controller等都是无状态对象），我们使用时只是简单的使用，并不涉及到修改bean内部的属性，因此不会出现多个线程修改同一个变量的场景。  
 　　如果我们必须要在bean中声明有状态的实例变量或类变量，让对象变成一个有状态的对象的时候，可以使用ThreahLocal，从而把变量变成改线程私有的。如果定义的实例变量或类变量需要在多个线程之间共享，只能使用synchronized，Lock或CAS来实现同步。
 
 
