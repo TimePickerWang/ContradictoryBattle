@@ -1,7 +1,6 @@
 # 一、数据库
 ## 1. 数据库连接池
-[DBCP官方文档](http://commons.apache.org/proper/commons-dbcp/configuration.html)
-&#160;&#160;
+[详细了解请参照DBCP官方文档](http://commons.apache.org/proper/commons-dbcp/configuration.html)  
 参数相关：
 
 - username：数据库的用户名。
@@ -20,11 +19,11 @@
 
 
 # 二、java集合
-![collection](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/collection_1544689155_27250.jpg?raw=true)
+![collection](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/collection.jpg?raw=true)
 
 
 ## 1.HashMap
-HashMap底层即为下面 Node<K,V>类型的数组，每个 Node<K,V>包含四个字段：通过key计算出的hash，key值，value值，和指向下一个节点的指针next，因此Node<K,V>也可以连为一个链表。HashMap允许存储为null的键和值。
+&emsp;&emsp;HashMap底层即为下面 Node<K,V>类型的数组，每个 Node<K,V>包含四个字段：通过key计算出的hash，key值，value值，和指向下一个节点的指针next，因此Node<K,V>也可以连为一个链表。HashMap允许存储为null的键和值。
 
 ```java
 static class Node<K,V> implements Map.Entry<K,V> {
@@ -103,7 +102,6 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
     return null;
 }
 ```
-&#160;&#160;
 **注：代码中的两个常量DEFAULT_INITIAL_CAPACITY和MIN_TREEIFY_CAPACITY都是指的table的长度(Node<K,V>数组的长度)，而不是table中Node<K,V>的数量，而扩容是判断的是size和threshold的大小，此时size指的是Node<K,V>的数量**
 
 （1）调用put方法时首先要通过key字段计算hash码（hash码为int类型），然后将计算出的hash码和该hash码右移16位后的值做'^'运算（混合原始哈希码的高位和低位，以此来加大低位的随机性，可参考[JDK 源码中 HashMap 的 hash 方法原理是什么？](https://www.zhihu.com/question/20733617/answer/111577937)），所的的结果赋给Node<K,V>对象hash字段。注意，当key字段是null，赋给Node<K,V>对象hash字段值为0，这也表明当存储的key为null时，该Node<K,V>对象始终在table第0个桶上。  
@@ -199,8 +197,7 @@ private static int hugeCapacity(int minCapacity) {
         MAX_ARRAY_SIZE;
 }
 ```
-&#160;&#160;
-　　以上代码可以看到：在它们在添加第一个元素后会出现两种完全不同的情况：如果是调用无参的构造方法，添加第一个元素后List会自动增长到10的长度。如果是调用new ArrayList(0)，添加第一个元素后List的长度是1。  
+&emsp;&emsp;以上代码可以看到：在它们在添加第一个元素后会出现两种完全不同的情况：如果是调用无参的构造方法，添加第一个元素后List会自动增长到10的长度。如果是调用new ArrayList(0)，添加第一个元素后List的长度是1。  
 　　**扩容规则：**  
 　　从上面也可以看出：若原List的长度为n，则添加一个元素后会计算一下新List可能的长度为**1.5n（取整）**  
 　　1.此时如果1.5n<(n+1)，则新List的长度在原List的长度上加1，即（n+1）  
@@ -212,7 +209,7 @@ private static int hugeCapacity(int minCapacity) {
 
 # 三、java并发
 **J.U.C包的构成**
-![J.U.C](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/juc_1544758685_14921.jpg?raw=true)
+![J.U.C](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/juc.jpg?raw=true)
 
 
 ## 1.并发容器
@@ -234,9 +231,8 @@ private static int hugeCapacity(int minCapacity) {
 2.不能用于实时读，只能保证最终的一致性。适用于读多写少的场景。
 
 
-### 1.2 ConcurrentHashMap
-&#160;&#160;
-　　ConcurrentHashMap是线程安全的的Map容器，在JDK 1.8之前的版本采用的是分段锁的机制来提高并发度，后由于JDK 的synchronzied做了很多的优化，因此JDK 1.8舍弃了之前的segment分段锁，直接采用CAS机制+synchronzied来支持并发操作。  
+### 1.2 ConcurrentHashMap  
+&emsp;&emsp;ConcurrentHashMap是线程安全的的Map容器，在JDK 1.8之前的版本采用的是分段锁的机制来提高并发度，后由于JDK 的synchronzied做了很多的优化，因此JDK 1.8舍弃了之前的segment分段锁，直接采用CAS机制+synchronzied来支持并发操作。  
 　　ConcurrentHashMap和HashMap的底层很相似，也是Node<K,V>类型的数组，只不过在值val和指向下一个节点的指针next字段上加了volatile进行修饰。
 
 ```java
@@ -336,8 +332,7 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
     return null;
 }
 ```
-&#160;&#160;
-　　ConcurrentHashMap在put操作上和HashMap差别不多，主要差别在多了一些同步的机制：  
+&emsp;&emsp;ConcurrentHashMap在put操作上和HashMap差别不多，主要差别在多了一些同步的机制：  
 　　1.首先也要通过key值来计算hash码。然后判断table是否为空，table为空时，需要调用initTable()进行初始化。  
 　　2.然后也是通过(n - 1) & hash来确定新元素在table中的位置，当该位置为null时，通过CAS方式来创建新的Node<K,V>对象，并放在table中的i位置上，这一步不需要加锁。  
 　　3.如果该位置不为空，需要对该位置的桶加锁，后续的操作和HashMap类似，这里不再详细讨论。
@@ -345,7 +340,6 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
 
 
 ### 1.n BlockingQueue
-&#160;&#160;
 BlockingQueue有如下子类：
 ```java
 ArrayBlockingQueue(底层为Object数组)
@@ -369,8 +363,7 @@ BlockingQueue调用不同API后的结果如下图（抛出异常、返回特殊�
 ## 2.同步组件
 
 ### 2.1 AQS介绍(AbstractQueuedSynchronizer)
-&#160;&#160;
-　　首先对AQS做一个简单的介绍，AQS即“抽象队列同步器”，它定义了一套多线程访问共享资源的同步器框架。AQS的功能可以分为两类：独占锁（ReentrantLock）和共享锁（Semaphore、CountDownLatch）。它的所有子类中，要么实现并使用了它独占锁的API，要么使用了共享锁的API，而不会同时使用两套API。AbstractQueuedSynchronizer类中有几个重要的部分先来看一看：
+&emsp;&emsp;首先对AQS做一个简单的介绍，AQS即“抽象队列同步器”，它定义了一套多线程访问共享资源的同步器框架。AQS的功能可以分为两类：独占锁（ReentrantLock）和共享锁（Semaphore、CountDownLatch）。它的所有子类中，要么实现并使用了它独占锁的API，要么使用了共享锁的API，而不会同时使用两套API。AbstractQueuedSynchronizer类中有几个重要的部分先来看一看：
 
 ```java
 public abstract class AbstractQueuedSynchronizer
@@ -401,9 +394,8 @@ public abstract class AbstractQueuedSynchronizer
     ...
 }
 ```
-![CLH](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/clh_1545278417_29342.jpg?raw=true)
-&#160;&#160;
-　　AbstractQueuedSynchronizer内部维持了一个上图所示的等待队列和一个state变量，等待队列由上面代码中的Node对象组成，其实是一个双向链表。现在以非公平的ReentrantLock为例，一般的加锁流程如下：  
+![CLH](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/clh.jpg?raw=true)
+&emsp;&emsp;AbstractQueuedSynchronizer内部维持了一个上图所示的等待队列和一个state变量，等待队列由上面代码中的Node对象组成，其实是一个双向链表。现在以非公平的ReentrantLock为例，一般的加锁流程如下：  
 　　1.假设现在没有进行任何加锁的操作，某时刻A线程调用ReentrantLock的lock()方法进行加锁，state最初为0，首先利用CAS操作将state变为1，并将当前线程设置为独占线程。  
 　　2.当再有线程来进行加锁操作时，先会判断state是否为0，为0则进行第1部操作。  
 　　这时很显然state不为0，接着再判断此时的此事的线程是否是当前的独占线程，如果是，即现在进行加锁的线程仍然是A线程，则把state加1，这也说明为什么ReentrantLock是可从入锁。释放锁时，直到state的值变为0时，锁才能够被完全释放。  
@@ -412,9 +404,9 @@ public abstract class AbstractQueuedSynchronizer
 
 ### 2.2 ReentrantLock
 **ReentrantLock和synchronized的区别**  
-　　1.ReentrantLock可以指定是公平锁还是非公平锁，而synchronized只能是公平锁。  
+　　1.ReentrantLock可以指定是公平锁还是非公平锁，而synchronized只能是非公平锁。  
 　　2.使用ReentrantLock时，提供了Condition类，可以分组调用signal()或await()方法，实现选择性通知。  
-　　3.提供能够中断等待锁的线程的机制，lock.lockInterruptibly()。  
+　　3.ReentrantLock提供能够中断等待锁的线程的机制，lock.lockInterruptibly()。如果使用 synchronized ，假设线程A获取了对象O的锁，如果线程A不释放，线程B将一直等下去，不能被中断。  
 
 ### 2.3 ReentrantReadWriteLock
 
@@ -429,7 +421,6 @@ public abstract class AbstractQueuedSynchronizer
 
 
 ### 2.6 CyclicBarrier
-&#160;&#160;
 **CyclicBarrier和CountDownLatch的区别**：  
 　　1.CountDownLatch的计数器只能使用一次；CyclicBarrier的计数器可以使用reset()重置，循环使用。  
 　　2.CountDownLatch描述的是1个或多个线程等待其它线程的关系；CyclicBarrier描述的是多个线程相互等待，直到满足条件后才能继续执行后续操作。
@@ -469,8 +460,7 @@ rejectHandler:拒绝处理任务时的策略，如果workQueue满了，且没有
 
 
 #### 3.2.1 corePoolSize、maximumPoolSize和workQueue间的关系
-&#160;&#160;
-　　如果运行的线程数少于corePoolSize，即使线程池中有空闲的线程，也会创建新的线程来处理任务；  
+&emsp;&emsp;如果运行的线程数少于corePoolSize，即使线程池中有空闲的线程，也会创建新的线程来处理任务；  
 　　如果运行的线程数大于等于corePoolSize，小于maximumPoolSize，只有当workQueue满的时候才会创建新的线程处理任务；  
 　　如果corePoolSize=maximumPoolSize，则线程池的大小是固定的。如果有新的任务提交且workQueue没满，就把任务放到workQueue里面，等待有空闲线程之后从workQueue里取出进行处理；  
 　　如果运行的线程数量大于maximumPoolSize，且workQueue已满，通过拒绝策略的参数制定策略去出来任务；  
@@ -478,21 +468,19 @@ rejectHandler:拒绝处理任务时的策略，如果workQueue满了，且没有
 
 
 #### 3.2.2 workQueue的三种处理方式
-&#160;&#160;
-　　直接切换：基于SynchronousQueue  
+&emsp;&emsp;直接切换：基于SynchronousQueue  
 　　使用无界队列：基于LinkedBlockingQueue，线程池中能创建的最大线程数是corePoolSize，maximumPoolSize不会起作用。当线程池中所有核心线程都在运行时，新的任务提交后放到workQueue中。  
 　　使用有界队列：基于ArrayBlockingQueue，将线程池中能创建的最大线程数限制为maximumPoolSize，可以降低资源消耗，但因为线程池和workQueue的容量都有限，会使线程池对线程调度变得更困难。  
 
 
 #### 3.2.3 线程池的合理配置
-&#160;&#160;
-　　CPU密集型任务，就要尽量压榨CPU，参考值可以设为$n_{cpu} + 1$  
+&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为$n_{cpu} + 1$  
 　　IO密集型任务，参考值可以设为$2n_{cpu}$
 
 
 
 ### 3.3 线程池的状态
-![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/pic/pool_1544939327_6001.jpg?raw=true)
+![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/pool.jpg?raw=true)
 
 SHUTDOWN：当线程池处于该状态时，不会接收新的任务，但会处理workQueue中阻塞的任务。在线程池处于RUNNINT状态时，调用shutdown()方法会使线程池进入该状态。
 
@@ -527,12 +515,9 @@ Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公
 ## 4.并发拓展
 
 ### 4.1 Spring与线程安全
-&#160;&#160;
-　　Spring中默认的bean都是单例的，那么是怎么保证线程安全的呢？  
+&emsp;&emsp;Spring中默认的bean都是单例的，那么是怎么保证线程安全的呢？  
 　　是因为我们交由spring管理的大多数对象都是无状态的对象（即没有在bean中声明有状态的实例变量或类变量，平时使用的dao、service、controller等都是无状态对象），我们使用时只是简单的使用，并不涉及到修改bean内部的属性，因此不会出现多个线程修改同一个变量的场景。  
 　　如果我们必须要在bean中声明有状态的实例变量或类变量，让对象变成一个有状态的对象的时候，可以使用ThreahLocal，从而把变量变成改线程私有的。如果定义的实例变量或类变量需要在多个线程之间共享，只能使用synchronized，Lock或CAS来实现同步。
-
-
 
 
 
