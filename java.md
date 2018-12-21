@@ -214,11 +214,11 @@ private static int hugeCapacity(int minCapacity) {
 
 ## 1.并发容器
 ```java
-    ArrayList   ->     CopyOnWriteList
-    HashSet     ->     CopyOnWriteArraySet
-    TreeSet     ->     ConcurrentSkipListSet（不允许null元素）
-    HashMap     ->     ConcurrentHashMap
-    TreeMap     ->     ConcurrentSkipListMap
+ArrayList   ->     CopyOnWriteList
+HashSet     ->     CopyOnWriteArraySet
+TreeSet     ->     ConcurrentSkipListSet（不允许null元素）
+HashMap     ->     ConcurrentHashMap
+TreeMap     ->     ConcurrentSkipListMap
 ```
 
 ### 1.1 CopyOnWriteList
@@ -395,6 +395,7 @@ public abstract class AbstractQueuedSynchronizer
 }
 ```
 ![CLH](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/clh.jpg?raw=true)
+
 &emsp;&emsp;AbstractQueuedSynchronizer内部维持了一个上图所示的等待队列和一个state变量，等待队列由上面代码中的Node对象组成，其实是一个双向链表。现在以非公平的ReentrantLock为例，一般的加锁流程如下：  
 　　1.假设现在没有进行任何加锁的操作，某时刻A线程调用ReentrantLock的lock()方法进行加锁，state最初为0，首先利用CAS操作将state变为1，并将当前线程设置为独占线程。  
 　　2.当再有线程来进行加锁操作时，先会判断state是否为0，为0则进行第1部操作。  
