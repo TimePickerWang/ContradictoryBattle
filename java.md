@@ -1,4 +1,45 @@
+# 目录|Content
+<a href='#database'>一、数据库</a>  
+　　<a href='#datasource'>1.数据库链接池</a>  
+<a href='#javaContainer'>二、java集合</a>  
+　　<a href='#HashMap'>1.HashMap</a>  
+　　　　<a href='#HashMapPutMethod'>1.1 put方法</a>  
+　　　　<a href='#HashMap2Pow'>1.2 HashMap的长度为什么要是2的n次方</a>  
+　　<a href='#ArrayList'>2.ArrayList</a>  
+<a href='#javaConcurrent'>三、java并发</a>  
+　　<a href='#concurrentContainer'>1.并发容器</a>  
+　　　　<a href='#CopyOnWriteList'>1.1 CopyOnWriteList</a>  
+　　　　<a href='#ConcurrentHashMap'>1.2 ConcurrentHashMap</a>  
+　　　　　　<a href='#mapDifference'>1.2.1 ConcurrentHashMap和HashMap的区别</a>  
+　　　　　　<a href='#ConcurrentHashMapPutMethod'>1.2.2 put方法</a>  
+　　　　<a href='#blockingQueue'>1.n BlockingQueue</a>  
+　　<a href='#concurrentTools'>2.同步组件</a>  
+　　　　<a href='#AQSIntr'>2.1 AQS介绍(AbstractQueuedSynchronizer)</a>  
+　　　　<a href='#ReentrantLock'>2.2 ReentrantLock</a>  
+　　　　<a href='#ReentrantReadWriteLock'>2.3 ReentrantReadWriteLock</a>  
+　　　　<a href='#CountDownLatch'>2.4 CountDownLatch</a>  
+　　　　<a href='#Semaphore'>2.5 Semaphore</a>  
+　　　　<a href='#CyclicBarrier'>2.6 CyclicBarrier</a>  
+　　<a href='#threadPool'>3.线程池</a>  
+　　　　<a href='#threadPoolAdv'>3.1 线程池的优点</a>  
+　　　　<a href='#ThreadPoolExecutor'>3.2 ThreadPoolExecutor</a>  
+　　　　　　<a href='#corePoolSizeRela'>3.2.1 corePoolSize、maximumPoolSize和workQueue间的关系</a>  
+　　　　　　<a href='#workQueue'>3.2.2 workQueue的三种处理方式</a>  
+　　　　　　<a href='#threadPoolConf'>3.2.3 线程池的合理配置</a>  
+　　　　<a href='#threadPoolStatus'>3.3 线程池的状态</a>  
+　　　　<a href='#threadPoolMethod'>3.4 ThreadPoolExecutor提供的方法</a>  
+　　　　<a href='#4threadPool'>3.5 Executor提供的四种线程池</a>  
+　　<a href='#Concurrentexpand'>4.并发拓展</a>  
+　　　　<a href='#SpringAdnThreadSafe'>4.1 Spring与线程安全</a>  
+
+
+----
+
+
+
+<a id='database'></a>
 # 一、数据库
+<a id='datasource'></a>
 ## 1. 数据库连接池
 [详细了解请参照DBCP官方文档](http://commons.apache.org/proper/commons-dbcp/configuration.html)  
 参数相关：
@@ -18,10 +59,12 @@
 - removeAbandonedTimeout：活动连接（未被close的活动连接）的最大空闲时间。单位为秒，超过此时间的连接会被释放到连接池中。
 
 
+<a id='javaContainer'></a>
 # 二、java集合
 ![collection](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/collection.jpg?raw=true)
 
 
+<a id='HashMap'></a>
 ## 1.HashMap
 &emsp;&emsp;HashMap底层即为下面 Node<K,V>类型的数组，每个 Node<K,V>包含四个字段：通过key计算出的hash，key值，value值，和指向下一个节点的指针next，因此Node<K,V>也可以连为一个链表。HashMap允许存储为null的键和值。
 
@@ -42,6 +85,7 @@ static class Node<K,V> implements Map.Entry<K,V> {
     ...
 ```
 
+<a id='HashMapPutMethod'></a>
 ### 1.1 put方法 
 ```java
 static final float DEFAULT_LOAD_FACTOR = 0.75f;  // 加载因子
@@ -114,6 +158,7 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
 （5）如果table中找到了和新的hash值与key相等的Node，进行替换后需要返回原Node的value值；如果没有找到相应的Node，在新增节点后需要 ++modCount（table的修改次数），++size操作（当前table的Node个数），并判断size和threshold（需进行扩容的阈值，初始为DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY，即12）的大小，当size>threshold时，需要调用resize()进行扩容。**扩容就是创建一个新的table，其长度和threshold阈值都增长为原来的2倍，然后遍历原table，将其中的每一个Node分配到新table对应的位置上（这就是rehash，在多线程的情况下rehash可能出现死循环，这里不做讨论）。**
 
 
+<a id='HashMap2Pow'></a>
 ### 1.2 HashMap的长度为什么要是2的n次方
 ```java
 tab[i = (n - 1) & hash]
@@ -124,6 +169,7 @@ tab[i = (n - 1) & hash]
 　　由于length是2的n次方，hash&(length-1)时候，每一位都能  &1（2的次幂减1后二进制末尾都是1），也就是和……1111111进行与运算，只要hash足够乱，产生碰撞的可能性就越小。
 
 
+<a id='ArrayList'></a>
 ## 2.ArrayList
 ArrayList底层为Object数组， 先看看它的几个常量和构造函数：
 
@@ -207,11 +253,13 @@ private static int hugeCapacity(int minCapacity) {
 　　**ArrayList移除元素**：ArrayList在移除元素时也会新建一个组数，然后将原数组的对象复制到新数组中。
 
 
+<a id='javaConcurrent'></a>
 # 三、java并发
 **J.U.C包的构成**
 ![J.U.C](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/juc.jpg?raw=true)
 
 
+<a id='concurrentContainer'></a>
 ## 1.并发容器
 ```java
 ArrayList   ->     CopyOnWriteList
@@ -221,6 +269,7 @@ HashMap     ->     ConcurrentHashMap
 TreeMap     ->     ConcurrentSkipListMap
 ```
 
+<a id='CopyOnWriteList'></a>
 ### 1.1 CopyOnWriteList
 所有的读操作都是在原list上读的，不加锁。所有的写操作需要加锁
 
@@ -231,6 +280,7 @@ TreeMap     ->     ConcurrentSkipListMap
 2.不能用于实时读，只能保证最终的一致性。适用于读多写少的场景。
 
 
+<a id='ConcurrentHashMap'></a>
 ### 1.2 ConcurrentHashMap  
 &emsp;&emsp;ConcurrentHashMap是线程安全的的Map容器，在JDK 1.8之前的版本采用的是分段锁的机制来提高并发度，后由于JDK 的synchronzied做了很多的优化，因此JDK 1.8舍弃了之前的segment分段锁，直接采用CAS机制+synchronzied来支持并发操作。  
 　　ConcurrentHashMap和HashMap的底层很相似，也是Node<K,V>类型的数组，只不过在值val和指向下一个节点的指针next字段上加了volatile进行修饰。
@@ -252,11 +302,13 @@ static class Node<K,V> implements Map.Entry<K,V> {
     ...
 ```
 
+<a id='mapDifference'></a>
 #### 1.2.1 ConcurrentHashMap和HashMap的区别
 1. ConcurrentHashMap是线程安全的，而HashMap是线程不安全的
 2. ConcurrentHashMap不允许key和value为null，而HashMap允许key和value为null
 
 
+<a id='ConcurrentHashMapPutMethod'></a>
 #### 1.2.2 put方法
 
 ```java
@@ -338,7 +390,7 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
 　　3.如果该位置不为空，需要对该位置的桶加锁，后续的操作和HashMap类似，这里不再详细讨论。
 
 
-
+<a id='blockingQueue'></a>
 ### 1.n BlockingQueue
 BlockingQueue有如下子类：
 ```java
@@ -360,8 +412,11 @@ BlockingQueue调用不同API后的结果如下图（抛出异常、返回特殊�
 
 
 
+<a id='concurrentTools'></a>
 ## 2.同步组件
 
+
+<a id='AQSIntr'></a>
 ### 2.1 AQS介绍(AbstractQueuedSynchronizer)
 &emsp;&emsp;首先对AQS做一个简单的介绍，AQS即“抽象队列同步器”，它定义了一套多线程访问共享资源的同步器框架。AQS的功能可以分为两类：独占锁（ReentrantLock）和共享锁（Semaphore、CountDownLatch）。它的所有子类中，要么实现并使用了它独占锁的API，要么使用了共享锁的API，而不会同时使用两套API。AbstractQueuedSynchronizer类中有几个重要的部分先来看一看：
 
@@ -403,24 +458,29 @@ public abstract class AbstractQueuedSynchronizer
 　　如果现在加锁的是另一个线程B，则new一个Node对象，并将线程B赋值为Node对象的thread字段。接着会判断此时等待队列的尾节点是否为null，如果不为null，则将该节点插入到等待队列的尾部。很显然此时等待队列的尾节点就是null，因此会new一个头节点，此时头节点就是尾节点，然后该Node赋值为头节点的后继节点和队列的尾节点，当再有新的线程尝试加锁时会直接在队列的尾部添加新的Node。
 
 
+<a id='ReentrantLock'></a>
 ### 2.2 ReentrantLock
 **ReentrantLock和synchronized的区别**  
-　　1.ReentrantLock可以指定是公平锁还是非公平锁，而synchronized只能是非公平锁。  
-　　2.使用ReentrantLock时，提供了Condition类，可以分组调用signal()或await()方法，实现选择性通知。  
-　　3.ReentrantLock提供能够中断等待锁的线程的机制，lock.lockInterruptibly()。如果使用 synchronized ，假设线程A获取了对象O的锁，如果线程A不释放，线程B将一直等下去，不能被中断。  
+　　1.**是否公平**：ReentrantLock可以指定是公平锁还是非公平锁，而synchronized只能是非公平锁。  
+　　2.**锁的通知**：使用ReentrantLock时，提供了Condition类，可以分组调用signal()或await()方法，实现选择性通知。  
+　　3.**锁的中断**：ReentrantLock提供能够中断等待锁的线程的机制，lock.lockInterruptibly()。如果使用 synchronized ，假设线程A获取了对象O的锁，如果线程A不释放，线程B将一直等下去，不能被中断。  
+　　4.**锁的释放**：释放锁时ReentrantLock必须手动进行释放(一般在finally代码块中)，而用synchronized时不需要用户去手动释放锁，要么等持有锁的线程执行完，要么该线程执行发生异常，锁才会被释放。  
 
+
+<a id='ReentrantReadWriteLock'></a>
 ### 2.3 ReentrantReadWriteLock
 
 
-
+<a id='CountDownLatch'></a>
 ### 2.4 CountDownLatch
 
 
 
+<a id='Semaphore'></a>
 ### 2.5 Semaphore
 
 
-
+<a id='CyclicBarrier'></a>
 ### 2.6 CyclicBarrier
 **CyclicBarrier和CountDownLatch的区别**：  
 　　1.CountDownLatch的计数器只能使用一次；CyclicBarrier的计数器可以使用reset()重置，循环使用。  
@@ -430,16 +490,20 @@ public abstract class AbstractQueuedSynchronizer
 
 
 
-
+<a id='threadPool'></a>
 ## 3.线程池
 
+
+<a id='threadPoolAdv'></a>
 ### 3.1 线程池的优点
-1. 重用存在的线程，减少对象创建、消亡的开销，性能佳。  
-2. 可有效的控制最大并发线程数，提高系统资源利用率，同时可以避免过多资源竞争，避免阻塞。  
-3. 提供定时执行、定期执行、单线程、并发数控制等功能。  
+**1.降低资源消耗**。通过复用已存在的线程和降低线程关闭的次数来尽可能降低系统性能损耗。  
+**2.提升系统响应速度**。通过复用线程，省去创建线程的过程，因此整体上提升了系统的响应速度。  
+**3.提高线程的可管理性**。线程是稀缺资源，如果无限制的创建，不仅会消耗系统资源，还会降低系统的稳定性，因此，需要使用线程池来管理线程。  
 
 
 
+
+<a id='ThreadPoolExecutor'></a>
 ### 3.2 ThreadPoolExecutor
 **ThreadPoolExecutor的重要参数**：
 
@@ -452,7 +516,7 @@ keepAliveTime:线程没有任务执行时最多保持多久时间终止（如果
 unit:keepAliveTime的时间单位
 threadFactory:线程工厂，用来创建线程
 
-rejectHandler:拒绝处理任务时的策略，如果workQueue满了，且没有空闲线程处理任务时候，有四个策略：
+rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理任务时候，有四个策略：
               1.AbortPolicy          直接抛出异常（默认）
               2.CallerRunsPolicy     用调用者所在的线程执行任务
               3.DiscardOldestPolicy  丢弃队列中最靠前的任务，并执行当前任务
@@ -460,26 +524,33 @@ rejectHandler:拒绝处理任务时的策略，如果workQueue满了，且没有
 ```
 
 
-#### 3.2.1 corePoolSize、maximumPoolSize和workQueue间的关系
-&emsp;&emsp;如果运行的线程数少于corePoolSize，即使线程池中有空闲的线程，也会创建新的线程来处理任务；  
-　　如果运行的线程数大于等于corePoolSize，小于maximumPoolSize，只有当workQueue满的时候才会创建新的线程处理任务；  
-　　如果corePoolSize=maximumPoolSize，则线程池的大小是固定的。如果有新的任务提交且workQueue没满，就把任务放到workQueue里面，等待有空闲线程之后从workQueue里取出进行处理；  
-　　如果运行的线程数量大于maximumPoolSize，且workQueue已满，通过拒绝策略的参数制定策略去出来任务；  
+<a id='corePoolSizeRela'></a>
+#### 3.2.1 线程池执行流程
+
+![CLH](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/liucheng.jpg?raw=true)
+
+&emsp;&emsp;如果运行的线程数少于corePoolSize，即使线程池中有空闲的线程，也会创建新的线程来处理任务  
+　　如果运行的线程数大于等于corePoolSize，小于maximumPoolSize，判断当前阻塞队列是否已满，如果未满，则将提交的任务放置在阻塞队列中  
+　　如果运行的线程数量大于maximumPoolSize，且workQueue已满，通过饱和策略的参数制定策略去出来任务  
+　　如果corePoolSize=maximumPoolSize，则线程池的大小是固定的。如果有新的任务提交且workQueue没满，就把任务放到workQueue里面，等待有空闲线程之后从workQueue里取出进行处理  
 　　如果需要降低系统消耗，可以设置较大的workQueue容量和较小的线程池容量，会降低线程处理任务的吞吐量。
 
 
+<a id='workQueue'></a>
 #### 3.2.2 workQueue的三种处理方式
 &emsp;&emsp;直接切换：基于SynchronousQueue  
 　　使用无界队列：基于LinkedBlockingQueue，线程池中能创建的最大线程数是corePoolSize，maximumPoolSize不会起作用。当线程池中所有核心线程都在运行时，新的任务提交后放到workQueue中。  
 　　使用有界队列：基于ArrayBlockingQueue，将线程池中能创建的最大线程数限制为maximumPoolSize，可以降低资源消耗，但因为线程池和workQueue的容量都有限，会使线程池对线程调度变得更困难。  
 
 
+<a id='threadPoolConf'></a>
 #### 3.2.3 线程池的合理配置
 &emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为$n_{cpu} + 1$  
 　　IO密集型任务，参考值可以设为$2n_{cpu}$
 
 
 
+<a id='threadPoolStatus'></a>
 ### 3.3 线程池的状态
 ![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/pool.jpg?raw=true)
 
@@ -488,6 +559,7 @@ SHUTDOWN：当线程池处于该状态时，不会接收新的任务，但会处
 STOP：当线程池处于该状态时，不接受新任务，也不处理workQueue中的任务，会中断正在处理任务的线程。在线程池处于RUNNINT、SHUTDOWN状态时，调用shutdownNow()方法会使线程池进入该状态。
 
 
+<a id='threadPoolMethod'></a>
 ### 3.4 ThreadPoolExecutor提供的方法
 
 ```java
@@ -503,6 +575,7 @@ getActiveCount():          当前线程池中正在执行任务的线程数量
 ```
 
 
+<a id='4threadPool'></a>
 ### 3.5 Executor提供的四种线程池
 ```java
 Executor.newCachedThreadPool:创建一个可缓存的线程池，若线程池的大小超过了需要，可以灵活回收线程
@@ -513,8 +586,10 @@ Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公
 ```
 
 
+<a id='Concurrentexpand'></a>
 ## 4.并发拓展
 
+<a id='SpringAdnThreadSafe'></a>
 ### 4.1 Spring与线程安全
 &emsp;&emsp;Spring中默认的bean都是单例的，那么是怎么保证线程安全的呢？  
 　　是因为我们交由spring管理的大多数对象都是无状态的对象（即没有在bean中声明有状态的实例变量或类变量，平时使用的dao、service、controller等都是无状态对象），我们使用时只是简单的使用，并不涉及到修改bean内部的属性，因此不会出现多个线程修改同一个变量的场景。  
