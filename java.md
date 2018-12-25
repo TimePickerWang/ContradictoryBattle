@@ -39,8 +39,8 @@
 　　　　<a href='#Buffer'>3.1 缓冲区Buffer</a>  
 　　　　<a href='#Channel'>3.2 通道Channel</a>  
 　　　　<a href='#Selector'>3.3 多路复用器Selector</a>  
-　　　　<a href='#IOTimePic'>3.4 服务端和客户端的通讯时序图</a>
-　　　　<a href='#NIOAdvantage'>3.5 NIO的优点</a>
+　　　　<a href='#IOTimePic'>3.4 服务端和客户端的通讯时序图</a>  
+　　　　<a href='#NIOAdvantage'>3.5 NIO的优点</a>  
 　　<a href='#AIO'>4.AIO</a>  
 
 
@@ -677,14 +677,14 @@ java.nio.channels.Channel 接口：
 
 获取通道的方式：
     1. Java 针对支持通道的类提供了 getChannel() 方法
-            本地 IO：
-            FileInputStream/FileOutputStream
-            RandomAccessFile
+		    本地 IO：
+		    FileInputStream/FileOutputStream
+		    RandomAccessFile
 
-            网络IO：
-            Socket
-            ServerSocket
-            DatagramSocket
+		    网络IO：
+		    Socket
+		    ServerSocket
+		    DatagramSocket
 
     2. 在 JDK 1.7中的NIO.2针对各个通道提供了静态方法 open()
     3. 在 JDK 1.7中的NIO.2的Files工具类的 newByteChannel()
@@ -721,7 +721,7 @@ java.nio.channels.Channel 接口：
 　　我们可以得出结论：异步Socket Channel是被动执行对象，我们不需要想NIO编程那样创建一个独立的IO线程来处理读写操作。对于AsynchronousServerSocketChannel和AsynchronousSocketChannel，它们都由JDK底层的线程池负责回调并驱动读写操作。正因为如此，基于NIO2.0新的异步非阻塞Channel进行编程比NIO编程更为简单。
 
 
-**IO模型的对比**
+**IO模型的对比**  
 ![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/IOCampare.jpg?raw=true)
 
 
