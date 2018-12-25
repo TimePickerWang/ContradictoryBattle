@@ -31,7 +31,20 @@
 　　　　<a href='#4threadPool'>3.5 Executor提供的四种线程池</a>  
 　　<a href='#Concurrentexpand'>4.并发拓展</a>  
 　　　　<a href='#SpringAdnThreadSafe'>4.1 Spring与线程安全</a>  
+　　　　<a href='#volatile'>4.2 volatile关键字</a>  
+<a href='#javaIO'>四、BIO、NIO、AIO</a>  
+　　<a href='#BIO'>1.BIO</a>  
+　　<a href='#fakeSynIo'>2.伪异步I/O</a>  
+　　<a href='#NIO'>3.NIO</a>  
+　　　　<a href='#Buffer'>3.1 缓冲区Buffer</a>  
+　　　　<a href='#Channel'>3.2 通道Channel</a>  
+　　　　<a href='#Selector'>3.3 多路复用器Selector</a>  
+　　　　<a href='#IOTimePic'>3.4 服务端和客户端的通讯时序图</a>
+　　　　<a href='#NIOAdvantage'>3.5 NIO的优点</a>
+　　<a href='#AIO'>4.AIO</a>  
 
+
+<a href='#reference'>reference</a>  
 
 ----
 
@@ -517,9 +530,9 @@ unit:keepAliveTime的时间单位
 threadFactory:线程工厂，用来创建线程
 
 rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理任务时候，有四个策略：
-              1.AbortPolicy          直接抛出异常（默认）
+              1.AbortPolicy          直接拒绝任务，并抛出RejectedExecutionException异常（默认）
               2.CallerRunsPolicy     用调用者所在的线程执行任务
-              3.DiscardOldestPolicy  丢弃队列中最靠前的任务，并执行当前任务
+              3.DiscardOldestPolicy  丢弃掉阻塞队列中存放时间最久的任务，执行当前任务
               4.DiscardPolicy        直接丢弃该任务
 ```
 
@@ -597,7 +610,124 @@ Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公
 
 
 
+<a id='volatile'></a>
+### 4.2 volatile关键字
 
 
+
+<a id='javaIO'></a>
+# 四、BIO、NIO、AIO
+
+<a id='BIO'></a>
+## 1.BIO
+
+![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/BIO.jpg?raw=true)
+
+&emsp;&emsp;采用BIO通信模型的服务端，通常由一个独立的Acceptor线程负责监听客户端的连接，它接收到客户端的连接请求之后为每个客户端创建一个新的线程进行链路处理，处理完成之后，通过输出流返回应答给客户端，线程销毁，这就是典型的一请求一应答通信模型。  
+　　该模型最大的问题就是缺乏弹性伸缩能力，当客户端并发访问量增加后，服务端的线程个数和客户端并发访问数呈1:1的正比关系，由于线程是Java虚拟机非常宝贵的系统资源，当线程数膨胀之后，系统的性能将急剧下降，随着并发访问量的继续增大，系统会发生线程堆栈溢出、创建新线程失败等问题，并最终导致进程宕机或者僵死，不能对外提供服务。
+
+
+
+<a id='fakeSynIo'></a>
+## 2.伪异步I/O
+![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/fakeSynIO.jpg?raw=true)
+
+&emsp;&emsp;为了解决同步阻塞I/O面临的一个链路需要一个线程处理的问题，后端可以通过一个线程池来处理多个客户端的请求接入，形成客户端个数M：线程池最大线程数N的比例关系，其中M可以远远大于N，通过线程池可以灵活的调配线程资源。  
+　　当有新的客户端接入时，将客户端的Socket封装成一个Task(该任务实现Java.lang.Runnablle接口)投递到后端的线程池中进行处理，JDK的线程池维护一个阻塞队列和N个活跃线程对阻塞队列中的任务进行处理。由于线程池可以设置阻塞队列的大小和最大线程数(FixedThreadPool)，因此，它的资源占用是可控的，无论多少个客户端并发访问，都不会导致资源的耗尽和宕机。 由于线程池和阻塞队列都是有界的，因此，无论客户端并发连接数多大，它都不会导致线程个数过于膨胀或者内存溢出，相对于传统的一连接一线程模型，是一种改良。  
+　　伪异步I/O通信框架采用了线程池实现，因此避免了为每个请求都创建一个独立线程造成的线程资源耗尽问题。但是由于它底层的通信依然采用同步阻塞模型，因此无法从根本上解决问题。  
+
+
+
+<a id='NIO'></a>
+## 3.NIO
+&emsp;&emsp;在JDK1.4中引入的NIO解决了阻塞的问题。NIO提供了与传统BIO模型中的Socket和ServerSocket相对应的SocketChannel和ServerSocketChannel两种不同的套接字通道实现。新增的着两种通道都支持阻塞和非阻塞两种模式。阻塞模式使用非常简单，但是性能和可靠性都不好，非阻塞模式则正好相反。我们可以根据自己的需求来选择合适的模式，一般来说，低负载、低并发的应用程序可以选择同步阻塞IO以降低编程复杂度，但是对于高负载、高并发的网络应用，需要使用NIO的非阻塞模式进行开发。首先对NIO中一些新的概念进行一下介绍：  
+
+<a id='Buffer'></a>
+### 3.1 缓冲区Buffer
+&emsp;&emsp;在NIO库中，所有数据都是用缓冲区处理的。在读取数据时，它直接读到缓冲区中的；在写入数据时，写入到缓冲区中，任何时候访问NIO中的数据，都是通过缓冲区进行操作。缓冲区实质上是一个数组，但又不仅仅是一个数组，它还提供了对数据的结构化访问以及维护读写位置等信息。具体的缓存区有这些：ByteBuffe、 ShortBuffer、IntBuffer、LongBuffer、FloatBuffer、DoubleBuffer、CharBuffer，他们实现了相同的接口：Buffer。  
+
+```java
+缓冲区存取数据的两个核心方法：
+    put() : 存入数据到缓冲区中
+    get() : 获取缓冲区中的数据
+
+缓冲区中的四个核心属性：
+    capacity : 容量，表示缓冲区中最大存储数据的容量。一旦声明不能改变。
+    limit : 界限，表示缓冲区中可以操作数据的大小。（limit 后数据不能进行读写）
+    position : 位置，表示缓冲区中正在操作数据的位置。
+    mark : 标记，表示记录当前 position 的位置。可以通过 reset() 恢复到 mark 的位置
+四个量间的关系：0 <= mark <= position <= limit <= capacity
+
+直接缓冲区与非直接缓冲区：
+    非直接缓冲区：通过 allocate() 方法分配缓冲区，将缓冲区建立在 JVM 的内存中
+    直接缓冲区：通过 allocateDirect() 方法分配直接缓冲区，将缓冲区建立在物理内存中。可以提高效率
+```
+
+<a id='Channel'></a>
+### 3.2 通道Channel
+&emsp;&emsp;Channel是一个通道，本身不存储数据，可以通过它读取和写入数据，它就像自来水管一样，网络数据通过Channel读取和写入。通道与流的不同之处在于通道是双向的，流只是一个方向上移动(一个流必须是InputStream或者OutputStream的子类)，而且通道可以用于读、写和同时读写操作。同时Channel是全双工的，因此它可以比流更好的映射底层操作系统的API。  
+
+```java
+通道的主要实现类:
+java.nio.channels.Channel 接口：
+        |--FileChannel(本地文件传输)
+        |--SocketChannel(TCP)
+        |--ServerSocketChannel(TCP)
+        |--DatagramChannel(UDP)
+
+获取通道的方式：
+    1. Java 针对支持通道的类提供了 getChannel() 方法
+            本地 IO：
+            FileInputStream/FileOutputStream
+            RandomAccessFile
+
+            网络IO：
+            Socket
+            ServerSocket
+            DatagramSocket
+
+    2. 在 JDK 1.7中的NIO.2针对各个通道提供了静态方法 open()
+    3. 在 JDK 1.7中的NIO.2的Files工具类的 newByteChannel()
+```
+
+
+<a id='Selector'></a>
+### 3.3 多路复用器Selector
+&emsp;&emsp;多路复用器Selector是Java NIO编程的基础，多路复用器提供选择已经就绪的任务的能力，简单的说，Selector会不断的轮询注册在其上的Channel，如果某个Channel上面有新的TCP连接接入、读和写事件，这个Channel就处于就绪状态，会被Selector轮询出来，然后通过SelectionKey可以获取就绪Channel的集合，进行后续的I/O操作。  
+　　一个多用复用器Selector可以同时轮询多个Channel，由于JDK使用了epoll()代替传统的select实现，所以它并没有最大连接句柄1024/2048的限制，这也意味着只需要一个线程负责Selector的轮询，就可以接入成千上万的客户端。  
+
+
+
+<a id='IOTimePic'></a>
+### 3.4 服务端和客户端的通讯时序图
+
+![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/NIO.jpg?raw=true)
+
+
+<a id='NIOAdvantage'></a>
+### 3.5 NIO的优点
+(1)客户端发起的连接操作是异步的，可以通过在多路复用器注册OP_CONNECT等后续结果，不需要像之前的客户端那样被同步阻塞。  
+(2)SocketChannel的读写操作都是异步的，如果没有可读写的数据它不会同步等待，直接返回，这样IO通信线程就可以处理其它的链路，不需要同步等待这个链路可用。  
+(3)线程模型的优化：由于JDK的Selector在Linux等主流操作系统上通过epoll实现，它没有连接句柄数的限制(只受限于操作系统的最大句柄数或者对单个进程的句柄限制)，这意味着一个Selector线程可以同时处理成千上万个客户端连接，而且性能不会随着客户端的增加而线性下降，因此，它非常适合做高性能、高负载的网络服务器。  
+
+
+<a id='AIO'></a>
+## 4.AIO
+&emsp;&emsp;DK1.7升级了NIO类库，升级后的NIO类库被称为NIO2.0。也就是我们要介绍的AIO。NIO2.0引入了新的异步通道的概念，并提供了异步文件通道和异步套接字通道的实现。异步通道提供两种方式获取操作结果。  
+　　(1)通过Java.util.concurrent.Future类来表示异步操作的结果。  
+　　(2)在执行异步操作的时候传入一个Java.nio.channels。  
+　　CompletionHandler接口的实现类作为操作完成的回调。  
+　　NIO2.0的异步套接字通道是真正的异步非阻塞IO，它对应UNIX网络编程中的事件驱动IO(AIO)，它不需要通过多路复用器(Selector)对注册的通道进行轮询操作即可实现异步读写，从而简化了NIO的编程模型。  
+　　我们可以得出结论：异步Socket Channel是被动执行对象，我们不需要想NIO编程那样创建一个独立的IO线程来处理读写操作。对于AsynchronousServerSocketChannel和AsynchronousSocketChannel，它们都由JDK底层的线程池负责回调并驱动读写操作。正因为如此，基于NIO2.0新的异步非阻塞Channel进行编程比NIO编程更为简单。
+
+
+**IO模型的对比**
+![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/IOCampare.jpg?raw=true)
+
+
+<a id='reference'></a>
+# reference
+[一、BIO、NIO、AIO通信机制理解](https://blog.csdn.net/l_kanglin/article/details/71531761)  
+[Java 网络IO编程总结（BIO、NIO、AIO均含完整实例代码）](https://blog.csdn.net/anxpp/article/details/51512200)  
 
 
