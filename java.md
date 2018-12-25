@@ -558,8 +558,8 @@ rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理
 
 <a id='threadPoolConf'></a>
 #### 3.2.3 线程池的合理配置
-&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为$n_{cpu} + 1$  
-　　IO密集型任务，参考值可以设为$2n_{cpu}$
+&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为`$n_{cpu} + 1$ `   
+　　IO密集型任务，参考值可以设为`$2n_{cpu}$`
 
 
 
@@ -677,14 +677,14 @@ java.nio.channels.Channel 接口：
 
 获取通道的方式：
     1. Java 针对支持通道的类提供了 getChannel() 方法
-		    本地 IO：
-		    FileInputStream/FileOutputStream
-		    RandomAccessFile
+            本地 IO：
+            FileInputStream/FileOutputStream
+            RandomAccessFile
 
-		    网络IO：
-		    Socket
-		    ServerSocket
-		    DatagramSocket
+            网络IO：
+            Socket
+            ServerSocket
+            DatagramSocket
 
     2. 在 JDK 1.7中的NIO.2针对各个通道提供了静态方法 open()
     3. 在 JDK 1.7中的NIO.2的Files工具类的 newByteChannel()
