@@ -175,6 +175,7 @@ create table tablename(id int primary key auto_increment , name varchar(32) uniq
 
 
 **不同隔离级别可能发生的问题**：  
+
 | 事物隔离级别 | 脏读 | 不可重复读 | 幻读 |  
 | --- | --- | --- | --- |  
 | READ UNCOMMITTED | 是 | 是 | 是 |  
