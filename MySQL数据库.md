@@ -33,7 +33,7 @@
 <a id='slowfind'></a>
 # 二、慢查询
 
-&emsp;&emsp;MySQL默认10秒内没有响应SQL结果,则为慢查询。可以去修改MySQL慢查询默认时间。修改方式：  
+MySQL默认10秒内没有响应SQL结果,则为慢查询。可以去修改MySQL慢查询默认时间。修改方式：  
 
 ```sql
 --显示慢查询次数
@@ -60,11 +60,11 @@ DESC tablename; --不能显示索引名称
 
 <a id='primaryIndex'></a>
 ## 1.主键索引
-&emsp;&emsp;主键是一种唯一性索引，但它必须指定为“PRIMARY KEY”。  
+主键是一种唯一性索引，但它必须指定为“PRIMARY KEY”。  
 
 ```sql
---当一张表，把某个列设为主键的时候，则该列就是主键索引，例如：
-create table aaa
+--当一张表把某个列设为主键的时候，则该列就是主键索引，例如：
+create table tablename
 (id int unsigned primary key auto_increment ,
 name varchar(32) not null default '');
 
@@ -80,7 +80,7 @@ alter table tablename drop primary key(列名);
 &emsp;&emsp;普通索引（由关键字KEY或INDEX定义的索引）的唯一任务是加快对数据的访问速度。因此，应该只为那些最经常出现在查询条件（WHERE column =）或排序条件（ORDER BY column）中的数据列创建索引。只要有可能，就应该选择一个数据最整齐、最紧凑的数据列（如一个整数类型的数据列）来创建索引。  
 
 ```sql
-create table ccc(
+create table tablename(
 id int unsigned,
 name varchar(32)
 )
@@ -92,7 +92,7 @@ alter table tablename add index [索引名](列1,列名2);
 
 <a id='uniqueIndex'></a>
 ## 3.唯一索引
-&emsp;&emsp;唯一索引列的所有值都只能出现一次，即必须唯一。唯一性索引可以用以下几种方式创建：  
+唯一索引列的所有值都只能出现一次，即必须唯一。唯一性索引可以用以下几种方式创建：  
 ```sql
 --创建索引
 CREATE UNIQUE INDEX [索引名] ON tablename (列名);
@@ -124,12 +124,12 @@ create table tablename(id int primary key auto_increment , name varchar(32) uniq
 <a id='bTreeAndBPlusTree'></a>
 ## 5.B树和B+树做索引的区别
 
-**B树查找方式**：
+**B树查找方式**：  
 &emsp;&emsp;B树中每个节点包含了键值和键值对于的数据对象存放地址指针，所以成功搜索一个对象可以不用到达树的叶节点。  
 　　在 B 树中查找给定关键字的方法是：首先把根结点取来，在根结点所包含的关键字 K1,…,kj 查找给定的关键字（可用顺序查找或二分查找法），若找到等于给定值的关键字，则查找成功；否则，一定可以确定要查的关键字在某个 Ki 或 Ki+1 之间，于是取Pi所指的下一层索引节点块继续查找，直到找到，或指针 Pi 为空时查找失败。  
 
 
-**B＋树查找方式**：
+**B＋树查找方式**：  
 &emsp;&emsp;B+树非叶节点中存放的关键字并不指示数据对象的地址指针，非叶节点只是索引部分。所有的叶节点在同一层上，包含了全部关键字和相应数据对象的存放地址指针，且叶节点按关键字从小到大顺序链接。  
 　　B+树有2个头指针，一个是树的根节点，一个是最小关键码的叶节点。所以 B+ 树有两种搜索方法：一种是按叶节点自己拉起的链表顺序搜索。一种是从根节点开始搜索，和 B 树类似，不过如果非叶节点的关键码等于给定值，搜索并不停止，而是继续沿右指针，一直查到叶节点上的关键码。所以无论搜索是否成功，都将走完树的所有层。B+树中，数据对象的插入和删除仅在叶节点上进行。  
 
@@ -195,8 +195,8 @@ SELECT @@TRANSACTION_ISOLATION;
 # 七、MVCC（Multi-Version Concurrency Control多版本并发控制）
 **注**：本节参考[轻松理解MYSQL MVCC 实现机制](https://blog.csdn.net/whoamiyang/article/details/51901888)，详细了解请参考原文  
 
-&emsp;&emsp;大多数的MySQL事务型存储引擎，如InnoDB都使用一种简单的行锁机制。事实上，他们都和另外一种用来增加并发性的被称为“多版本并发控制（MVCC）”的机制来一起使用。你可将MVCC看成行级别锁的一种妥协，它在许多情况下避免了使用锁，同时可以提供更小的开销。
-　　InnoDB引擎有当前读和快照读两种模式。当前读即加锁读，读取记录的最新版本号，会加锁保证其他并发事物不能修改当前记录，直至释放锁。插入、更新、删除操作默认使用当前读，显示的为select语句加lock in share mode或for update的查询也采用当前读模式。 快照读不加锁，读取记录的快照版本，而非最新版本，使用MVCC机制，最大的好处是读取不需要加锁，读写不冲突，用于读操作多于写操作的应用，因此在不显示加lock in share mode或for update的select语句，即普通的一条select语句默认都是使用快照读MVCC实现模式。
+&emsp;&emsp;大多数的MySQL事务型存储引擎，如InnoDB都使用一种简单的行锁机制。事实上，他们都和另外一种用来增加并发性的被称为“多版本并发控制（MVCC）”的机制来一起使用。你可将MVCC看成行级别锁的一种妥协，它在许多情况下避免了使用锁，同时可以提供更小的开销。  
+　　InnoDB引擎有当前读和快照读两种模式。当前读即加锁读，读取记录的最新版本号，会加锁保证其他并发事物不能修改当前记录，直至释放锁。插入、更新、删除操作默认使用当前读，显示的为select语句加lock in share mode或for update的查询也采用当前读模式。 快照读不加锁，读取记录的快照版本，而非最新版本，使用MVCC机制，最大的好处是读取不需要加锁，读写不冲突，用于读操作多于写操作的应用，因此在不显示加lock in share mode或for update的select语句，即普通的一条select语句默认都是使用快照读MVCC实现模式。  
 　　InnoDB通过为每一行记录添加两个额外的隐藏的值来实现MVCC，这两个值一个记录这行数据何时被创建（这里记为”创建版本ID“），另外一个记录这行数据何时过期或删除（这里记为”删除版本ID“）。InnoDB并不存储这些事件发生时的实际时间，它只存储这些事件发生时的系统版本号。这是一个随着事务的创建而不断增长的数字。每开始一个新的事务，系统版本号就会自动递增，事务开始时刻的系统版本号会作为事务的ID。下面来看看当隔离级别是REPEATABLE READ时这种策略是如何应用到特定的操作的：  
 
 
