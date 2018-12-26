@@ -175,12 +175,12 @@ create table tablename(id int primary key auto_increment , name varchar(32) uniq
 
 
 **不同隔离级别可能发生的问题**：  
-| 事物隔离级别 | 脏读 | 不可重复读 | 幻读 |
-| --- | --- | --- | --- |
-| READ UNCOMMITTED | 是 | 是 | 是 |
-| READ COMMITTED | 否 | 是 | 是 |
-| REPEATABLE READ | 否 | 	否 | 是 |
-| SERIALIZABLE | 否 | 否 | 否 |
+| 事物隔离级别 | 脏读 | 不可重复读 | 幻读 |  
+| --- | --- | --- | --- |  
+| READ UNCOMMITTED | 是 | 是 | 是 |  
+| READ COMMITTED | 否 | 是 | 是 |  
+| REPEATABLE READ | 否 | 	否 | 是 |  
+| SERIALIZABLE | 否 | 否 | 否 |  
 
 
 查看mysql默认的隔离级别，输入命令：
