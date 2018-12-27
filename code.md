@@ -1,7 +1,22 @@
-# 程序
+<a href='#moreExtends'>一、多继承的实现(通过内部类)</a>  
+<a href='#singleton'>二、单例模式</a>  
+　　<a href='#hungryGuy'>1.饿汉式</a>  
+　　<a href='#lazyGuy'>2.懒汉式-双重同步锁</a>  
+　　<a href='#enum'>3.枚举</a>  
+<a href='#deadLock'>三、 死锁</a>  
+<a href='#proAndCon'>四、生产者消费者</a>  
+　　<a href='#waitNotify'>1.wait-notify</a>  
+　　<a href='#LockCondition'>2.Lock-Condition</a>  
+　　<a href='#BlockingQueue'>3.BlockingQueue</a>  
 
 
-## 1.多继承的实现(通过内部类)
+
+
+---
+
+
+<a id='moreExtends'></a>
+# 一、多继承的实现(通过内部类)
 ```java
 class Call {
 	public void callSomebody(String phoneNum){
@@ -42,8 +57,12 @@ public class Phone {
 }
 ```
 
-## 2.单例模式
-### 2.1 (饿汉式)
+
+<a id='singleton'></a>
+# 二、单例模式
+
+<a id='hungryGuy'></a>
+## 1.饿汉式
 ```java
 public class Singleton {
     // 私有构造函数
@@ -59,7 +78,9 @@ public class Singleton {
 }
 ```
 
-### 2.2（懒汉式  双重同步锁单例模式）
+
+<a id='lazyGuy'></a>
+## 2.懒汉式-双重同步锁
 ```java
 public class Singleton {
     // 私有构造函数
@@ -88,7 +109,8 @@ public class Singleton {
 }
 ```
 
-### 2.3（枚举）
+<a id='enum'></a>
+## 3.枚举
 ```java
 public class Singleton {
     // 私有构造函数
@@ -115,7 +137,9 @@ public class Singleton {
 }
 ```
 
-## 3. 死锁
+
+<a id='deadLock'></a>
+# 三、 死锁
 ```java
 public class DeadLock {
 	private static String a = "aaa";
@@ -153,12 +177,16 @@ public class DeadLock {
 }
 ```
 
-## 4.生产者消费者
+
+<a id='proAndCon'></a>
+# 四、生产者消费者
 **需注意的点：**
 **1.produce()和consume()方法中的判断需要在while中，不能在if中（可能造成数据异常）**
 **2.唤醒时不能只唤醒一个线程（可能造成所有线程等待，程序不能进行）**
 
-### 4.1（wait-notify）
+
+<a id='waitNotify'></a>
+## 1.wait-notify
 ```java
 class Resource {
 	private int i;
@@ -245,7 +273,9 @@ public class ConProWaitNotify {
 		new Thread(consumer, "consumerB").start();
 		new Thread(consumer, "consumerC").start();
 ```
-### 4.2（Lock-Condition）
+
+<a id='LockCondition'></a>
+## 2.Lock-Condition
 ```java
 import java.util.LinkedList;
 import java.util.concurrent.locks.Condition;
@@ -350,7 +380,9 @@ public class ConProLockCondition {
 }
 ```
 
-### 4.3（BlockingQueue）
+
+<a id='BlockingQueue'></a>
+## 3.BlockingQueue
 ```java
 import java.util.concurrent.ArrayBlockingQueue;
 

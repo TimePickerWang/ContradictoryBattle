@@ -8,8 +8,9 @@
 　　<a href='#bTreeAndBPlusTree'>5.B树和B+树做索引的区别</a>  
 <a href='#MySQLImprove'>四、MySQL优化技巧</a>  
 <a href='#transactionTrait'>五、事物的特性（ACID）</a>  
-<a href='#transactionIsolation'>六、事务的隔离级别</a>  
-<a href='#MVCC'>七、MVCC（Multi-Version Concurrency Control多版本并发控制）</a>  
+<a href='#readViewAndCurRead'>六、快照读和当前读</a>  
+<a href='#transactionIsolation'>七、事务的隔离级别</a>  
+<a href='#MVCC'>八、MVCC（Multiversion Concurrency Control多版本并发控制）</a>  
 
 
 <a href='#reference'>reference</a>  
@@ -115,7 +116,7 @@ create table tablename(id int primary key auto_increment , name varchar(32) uniq
 第四，在使用分组和排序子句进行数据检索时，同样可以显著减少查询中分组和排序的时间。  
 第五，通过使用索引，可以在查询的过程中，使用优化隐藏器，提高系统的性能。  
 
-**缺点**：
+**缺点**：  
 第一，创建索引和维护索引要耗费时间，这种时间随着数据量的增加而增加。  
 第二，索引需要占物理空间，除了数据表占数据空间之外，每一个索引还要占一定的物理空间，如果要建立聚簇索引，那么需要的空间就会更大。  
 第三，当对表中的数据进行增加、删除和修改的时候，索引也要动态的维护，这样就降低了数据的维护速度。  
@@ -153,15 +154,30 @@ create table tablename(id int primary key auto_increment , name varchar(32) uniq
 
 <a id='transactionTrait'></a>
 # 五、事物的特性（ACID）
-&emsp;&emsp;原子性（Atomicity）：指事务是一个不可分割的工作单位，事务中的操作要么都发生，要么都不发生。  
-　　一致性（Consistency）：事务开始前和结束后，数据库的完整性约束没有被破坏 。比如A向B转账，不可能A扣了钱，B却没收到。  
+&emsp;&emsp;原子性（Atomicity）：一个事务是一个不可分割的最小工作单元，整个事物中的所有操作要么全部提交成功，要么全部失败回滚，不可能只执行其中的一部分操作。  
+　　一致性（Consistency）：数据库总是从一个一致性状态转换到另一个一致性的状态。比如A向B转账，不可能A扣了钱，B却没收到。  
 　　隔离性（Isolation）：事务的隔离性是多个用户**并发**访问数据库时，数据库为每一个用户开启的事务，不能被其他事务的操作数据所干扰，多个并发事务之间要相互隔离。  
 　　持久性（Isolation）：指一个事务一旦被提交，它对数据库中数据的改变就是永久性的，接下来即使数据库发生故障也不应该对其有任何影响。  
 
 
+<a id='readViewAndCurRead'></a>
+# 六、快照读和当前读
+```sql
+-- 快照读：简单的select操作，属于快照读，不加锁。(没有显示地为select语句加lock in share mode或for update)
+select * from table where ?;
+
+-- 当前读：特殊的读操作，插入/更新/删除操作，属于当前读，需要加锁。
+select * from table where ? lock in share mode;
+select * from table where ? for update;
+
+insert into table values (…);
+update table set ? where ?;
+delete from table where ?;
+```
+
 
 <a id='transactionIsolation'></a>
-# 六、事务的隔离级别
+# 七、事务的隔离级别
 &emsp;&emsp;事物的隔离级别主要是**为了保证事物的隔离性**，当有多个事物同时操作某个表的数据时，会有以下几个情况发生：  
 　　脏读：指一个事务读取了另一个事务未提交的数据。例如在数据库访问中，事务T1将某一值修改，然后事务T2读取该值，此后T1因为某种原因撤销对该值的修改，这就导致了T2所读取到的数据是无效的。  
 　　不可重复读：指在数据库访问中，一个事务范围内两个相同的查询却返回了不同数据。比如事务T1读取某一数据，事务T2读取并修改了该数据，T1为了对读取值进行检验而再次读取该数据，便得到了不同的结果。（update）  
@@ -176,13 +192,15 @@ create table tablename(id int primary key auto_increment , name varchar(32) uniq
 
 **不同隔离级别可能发生的问题**：  
 
-| 事物隔离级别 | 脏读 | 不可重复读 | 幻读 |  
-| --- | --- | --- | --- |  
-| READ UNCOMMITTED | 是 | 是 | 是 |  
-| READ COMMITTED | 否 | 是 | 是 |  
-| REPEATABLE READ | 否 | 	否 | 是 |  
-| SERIALIZABLE | 否 | 否 | 否 |  
+| 事物隔离级别 | 脏读 | 不可重复读 | 幻读 |
+| --- | --- | --- | --- |
+| READ UNCOMMITTED | 是 | 是 | 是 |
+| READ COMMITTED | 否 | 是 | 是 |
+| REPEATABLE READ | 否 | 	否 | 是 |
+| SERIALIZABLE | 否 | 否 | 否 | 
 
+
+**注：InnoDB和XtraDB存储引擎通过多版本并发控制（MVCC）解决了幻读的问题（《高性能MySQL 1.3.1节》）。这里补充一下：在快照读读情况下，mysql通过MVCC来避免幻读；在当前读读情况下，mysql通过next-key来避免幻读。**  
 
 查看mysql默认的隔离级别，输入命令：
 ```
@@ -193,13 +211,11 @@ SELECT @@TRANSACTION_ISOLATION;
 
 
 <a id='MVCC'></a>
-# 七、MVCC（Multi-Version Concurrency Control多版本并发控制）
-**注**：本节参考[轻松理解MYSQL MVCC 实现机制](https://blog.csdn.net/whoamiyang/article/details/51901888)，详细了解请参考原文  
+# 八、MVCC（Multiversion Concurrency Control多版本并发控制）
 
-&emsp;&emsp;大多数的MySQL事务型存储引擎，如InnoDB都使用一种简单的行锁机制。事实上，他们都和另外一种用来增加并发性的被称为“多版本并发控制（MVCC）”的机制来一起使用。你可将MVCC看成行级别锁的一种妥协，它在许多情况下避免了使用锁，同时可以提供更小的开销。  
+&emsp;&emsp;大多数的MySQL事务型存储引擎，如InnoDB都使用一种简单的行锁机制。事实上，他们都和另外一种用来增加并发性的被称为“多版本并发控制（MVCC）”的机制来一起使用。你可将MVCC看成行级别锁的一种妥协，它在许多情况下避免了使用锁，同时可以提供更小的开销。,MVCC的实现，是通过保存数据在某个时间点的快照来实现的。  
 　　InnoDB引擎有当前读和快照读两种模式。当前读即加锁读，读取记录的最新版本号，会加锁保证其他并发事物不能修改当前记录，直至释放锁。插入、更新、删除操作默认使用当前读，显示的为select语句加lock in share mode或for update的查询也采用当前读模式。 快照读不加锁，读取记录的快照版本，而非最新版本，使用MVCC机制，最大的好处是读取不需要加锁，读写不冲突，用于读操作多于写操作的应用，因此在不显示加lock in share mode或for update的select语句，即普通的一条select语句默认都是使用快照读MVCC实现模式。  
-　　InnoDB通过为每一行记录添加两个额外的隐藏的值来实现MVCC，这两个值一个记录这行数据何时被创建（这里记为”创建版本ID“），另外一个记录这行数据何时过期或删除（这里记为”删除版本ID“）。InnoDB并不存储这些事件发生时的实际时间，它只存储这些事件发生时的系统版本号。这是一个随着事务的创建而不断增长的数字。每开始一个新的事务，系统版本号就会自动递增，事务开始时刻的系统版本号会作为事务的ID。下面来看看当隔离级别是REPEATABLE READ时这种策略是如何应用到特定的操作的：  
-
+　　InnoDB通过为每一行记录添加两个额外的隐藏列来实现MVCC，这两个值一个记录这行数据何时被创建（这里记为”创建版本ID“），另外一个记录这行数据何时过期或删除（这里记为”删除版本ID“）。InnoDB并不存储这些事件发生时的实际时间，它只存储这些事件发生时的系统版本号。每开始一个新的事务，系统版本号就会自动递增，事务开始时刻的系统版本号会作为事物的版本号（这里记为”事务的ID“）。下面来看看当隔离级别是REPEATABLE READ时这种策略是如何应用到特定的操作的：  
 
 
 | CRUD | 操作方式 |
@@ -222,5 +238,5 @@ SELECT @@TRANSACTION_ISOLATION;
 
 <a id='reference'></a>
 # reference
-[轻松理解MYSQL MVCC 实现机制](https://blog.csdn.net/whoamiyang/article/details/51901888)  
+《高性能MySQL》
 
