@@ -200,7 +200,7 @@ delete from table where ?;
 | SERIALIZABLE | 否 | 否 | 否 | 
 
 
-**注：InnoDB和XtraDB存储引擎通过多版本并发控制（MVCC）解决了幻读的问题（《高性能MySQL 1.3.1节》）。这里补充一下：在快照读读情况下，mysql通过MVCC来避免幻读；在当前读读情况下，mysql通过next-key来避免幻读。**  
+**注：InnoDB和XtraDB存储引擎通过多版本并发控制（MVCC）解决了幻读的问题（《高性能MySQL 1.3.1节》）。这里补充一下：在快照读情况下，mysql通过MVCC来避免幻读；在当前读情况下，mysql通过next-key来避免幻读。**  
 
 查看mysql默认的隔离级别，输入命令：
 ```
