@@ -83,8 +83,7 @@ alter table tablename drop primary key(列名);
 ```sql
 create table tablename(
 id int unsigned,
-name varchar(32)
-)
+name varchar(32) );
 create index [索引名] on tablename (列1,列名2);
 
 alter table tablename add index [索引名](列1,列名2);
@@ -102,7 +101,9 @@ ALTER TABLE tablename ADD UNIQUE [索引名] (列名);
 --创建表的时候指定索引
 CREATE TABLE tablename ( [...], UNIQUE [索引名] (列名));
 --例：
-create table tablename(id int primary key auto_increment , name varchar(32) unique);
+create table tablename(
+id int primary key auto_increment,
+name varchar(32) unique);
 ```
 **注意**：unique字段可以为NULL，并可以有多NULL，但是如果是具体内容，则不能重复，但是不能存有重复的空字符串' '
 
@@ -181,13 +182,13 @@ delete from table where ?;
 &emsp;&emsp;事物的隔离级别主要是**为了保证事物的隔离性**，当有多个事物同时操作某个表的数据时，会有以下几个情况发生：  
 　　脏读：指一个事务读取了另一个事务未提交的数据。例如在数据库访问中，事务T1将某一值修改，然后事务T2读取该值，此后T1因为某种原因撤销对该值的修改，这就导致了T2所读取到的数据是无效的。  
 　　不可重复读：指在数据库访问中，一个事务范围内两个相同的查询却返回了不同数据。比如事务T1读取某一数据，事务T2读取并修改了该数据，T1为了对读取值进行检验而再次读取该数据，便得到了不同的结果。（update）  
-　　虚读（幻读）：是指在一个事务内读取到了别的事务插入的数据，导致前后读取不一致。(insert)  
+　　幻读（虚读）：是指在一个事务内读取到了别的事务插入的数据，导致前后读取不一致。(insert)  
 
-**事物有如下四个隔离级别**：
-- READ UNCOMMITTED: 赃读、不可重复读、虚读都有可能发生。  
-- READ COMMITTED: 避免赃读。不可重复读、虚读都有可能发生。（oracle默认）  
-- REPEATABLE READ:避免赃读、不可重复读。虚读有可能发生。（mysql默认）  
-- SERIALIZABLE: 避免赃读、不可重复读、虚读。  
+**事物有如下四个隔离级别**（级别由低到高，较低级别的隔离通常可以执行更高的并发，系统开销也更低。）：
+- READ UNCOMMITTED（未提交读）：在该级别，事物中的修改即使没有提交，对其他事物也都是可见的。  
+- READ COMMITTED（提交读）：该级别满足隔离性的简单定义：一个事物开始时，只能看见“自己”已经提交的事物所做的修改。该级别也叫不可重复读，因为两次执行同样的查询，可能会得到不一样的结果。（oracle默认）  
+- REPEATABLE READ（可重复读）：该级别保证了在同一事物中多次读取同样记录的结果是一致的。但理论上还是无法解决幻读的问题。（mysql默认）  
+- SERIALIZABLE（可串行化）： 该级别通过强制事物串行执行，避免了幻读的问题。简单来说，该级别会在读取的每行数据上都加锁，所以可能导致大量的超时和锁争用的问题。实际中很少用。  
 
 
 **不同隔离级别可能发生的问题**：  
@@ -200,7 +201,7 @@ delete from table where ?;
 | SERIALIZABLE | 否 | 否 | 否 | 
 
 
-**注：InnoDB和XtraDB存储引擎通过多版本并发控制（MVCC）解决了幻读的问题（《高性能MySQL 1.3.1节》）。这里补充一下：在快照读情况下，mysql通过MVCC来避免幻读；在当前读情况下，mysql通过next-key来避免幻读。**  
+**注：InnoDB和XtraDB存储引擎通过多版本并发控制（MVCC）解决了幻读的问题（《高性能MySQL 1.3.1节》）。这里补充一下：在快照读读情况下，mysql通过MVCC来避免幻读；在当前读读情况下，mysql通过next-key锁来避免幻读。**  
 
 查看mysql默认的隔离级别，输入命令：
 ```
