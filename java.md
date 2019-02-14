@@ -31,7 +31,10 @@
 　　　　<a href='#4threadPool'>3.5 Executor提供的四种线程池</a>  
 　　<a href='#Concurrentexpand'>4.并发拓展</a>  
 　　　　<a href='#SpringAdnThreadSafe'>4.1 Spring与线程安全</a>  
-　　　　<a href='#volatile'>4.2 volatile关键字</a>  
+　　<a href='#JMM'>5.Java内存模型（JMM）</a>  
+　　　　<a href='#MainMemoryAndWorkingMemory'>5.1 主内存和工作内存</a>  
+　　　　<a href='#AtomVisiOrder'>5.2 原子性、可见性和有序性</a>  
+　　　　<a href='#volatile'>5.3 volatile关键字</a>  
 <a href='#javaIO'>四、BIO、NIO、AIO</a>  
 　　<a href='#BIO'>1.BIO</a>  
 　　<a href='#fakeSynIo'>2.伪异步I/O</a>  
@@ -42,7 +45,7 @@
 　　　　<a href='#IOTimePic'>3.4 服务端和客户端的通讯时序图</a>  
 　　　　<a href='#NIOAdvantage'>3.5 NIO的优点</a>  
 　　<a href='#AIO'>4.AIO</a>  
-
+<a href='#JVM'>五、JVM</a>  
 
 <a href='#reference'>reference</a>  
 
@@ -558,7 +561,7 @@ rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理
 
 <a id='threadPoolConf'></a>
 #### 3.2.3 线程池的合理配置
-&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为`$n_{cpu} + 1$ `   
+&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为`$n_{cpu} + 1$ ` 
 　　IO密集型任务，参考值可以设为`$2n_{cpu}$`
 
 
@@ -609,9 +612,52 @@ Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公
 　　如果我们必须要在bean中声明有状态的实例变量或类变量，让对象变成一个有状态的对象的时候，可以使用ThreahLocal，从而把变量变成改线程私有的。如果定义的实例变量或类变量需要在多个线程之间共享，只能使用synchronized，Lock或CAS来实现同步。
 
 
+<a id='JMM'></a>
+## 5.Java内存模型（JMM）
+
+<a id='MainMemoryAndWorkingMemory'></a>
+### 5.1 主内存和工作内存
+&emsp;&emsp;Java内存模型的主要目标是定义程序中各个变量（这里的变量指的是实例字段、静态字段和构成数组对象的元素，但不包括局部变量，因为后者是线程私有的，不存在竞争问题）的访问规则，它规定了所有的变量都存储在主内存（虚拟机内存的一部分）中，每个线程都有自己的工作内存，线程的工作内存中保存了被该线程使用的变量的主内存副本拷贝，线程对变量的所有操作都必须在工作内存中进行，不能直接读写主内存中的变量，也不能直接访问其他线程工作内存中的变量，线程间变量值的传递需要通过主内存来完成。  
+
+![JMM](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/JMM.jpg?raw=true)
+
+&emsp;&emsp;java内存模型中，会存在缓存一致性问题和指令重排序的问题：在多线程情况下，由于每个线程都有自己的工作内存，而它们又共享同一主内存，当需要操作相同的变量时，有可能导致各自的缓存数据不一致。同时，为了能够充分利用CPU的资源，可能会对代码进行重排序，重排序保证最后的结果和顺序执行的结果相同，但不保证程序中各个语句计算的先后顺序和代码中的顺序一致。  
+　　对于指令的重排序，可以看如下例子：
+```java
+int a = 10;  //1
+int r = 2;   //2
+a = a + 3;   //3
+r = a*a;     //4
+```
+&emsp;&emsp;这段代码有4个语句，那么可能的一个执行顺序是：2  ->  1  ->  3  ->  4。但不可能是：2  ->  1  ->  4  ->  3。因为在进行重排序时会考虑指令之间的数据依赖性，如果一个指令Instruction 2必须用到Instruction 1的结果，那么处理器会保证Instruction 1会在Instruction 2之前执行。  
+　　但在多线程情况下，重排序可能会导致严重的错误：  
+
+```java
+//线程1:
+context = loadContext();   //语句1，读取配置文件
+inited = true;             //语句2，判断配置文件是否读取完毕
+
+//线程2:
+while(!inited ){
+  sleep()
+}
+doSomethingwithconfig(context);
+```
+&emsp;&emsp;上面代码中，由于语句1和语句2没有数据依赖性，因此可能会被重排序。假如发生了重排序，在线程1执行过程中先执行语句2，而此是线程2会以为初始化工作已经完成，那么就会跳出while循环，去执行doSomethingwithconfig(context)方法，而此时context并没有被初始化，就会导致程序出错。  
+
+
+<a id='AtomVisiOrder'></a>
+### 5.2 原子性、可见性和有序性
+
+
+
+
+
 
 <a id='volatile'></a>
-### 4.2 volatile关键字
+### 5.3 volatile关键字
+
+
 
 
 
@@ -625,7 +671,6 @@ Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公
 
 &emsp;&emsp;采用BIO通信模型的服务端，通常由一个独立的Acceptor线程负责监听客户端的连接，它接收到客户端的连接请求之后为每个客户端创建一个新的线程进行链路处理，处理完成之后，通过输出流返回应答给客户端，线程销毁，这就是典型的一请求一应答通信模型。  
 　　该模型最大的问题就是缺乏弹性伸缩能力，当客户端并发访问量增加后，服务端的线程个数和客户端并发访问数呈1:1的正比关系，由于线程是Java虚拟机非常宝贵的系统资源，当线程数膨胀之后，系统的性能将急剧下降，随着并发访问量的继续增大，系统会发生线程堆栈溢出、创建新线程失败等问题，并最终导致进程宕机或者僵死，不能对外提供服务。
-
 
 
 <a id='fakeSynIo'></a>
@@ -677,14 +722,14 @@ java.nio.channels.Channel 接口：
 
 获取通道的方式：
     1. Java 针对支持通道的类提供了 getChannel() 方法
-            本地 IO：
-            FileInputStream/FileOutputStream
-            RandomAccessFile
+		    本地 IO：
+		    FileInputStream/FileOutputStream
+		    RandomAccessFile
 
-            网络IO：
-            Socket
-            ServerSocket
-            DatagramSocket
+		    网络IO：
+		    Socket
+		    ServerSocket
+		    DatagramSocket
 
     2. 在 JDK 1.7中的NIO.2针对各个通道提供了静态方法 open()
     3. 在 JDK 1.7中的NIO.2的Files工具类的 newByteChannel()
@@ -695,7 +740,6 @@ java.nio.channels.Channel 接口：
 ### 3.3 多路复用器Selector
 &emsp;&emsp;多路复用器Selector是Java NIO编程的基础，多路复用器提供选择已经就绪的任务的能力，简单的说，Selector会不断的轮询注册在其上的Channel，如果某个Channel上面有新的TCP连接接入、读和写事件，这个Channel就处于就绪状态，会被Selector轮询出来，然后通过SelectionKey可以获取就绪Channel的集合，进行后续的I/O操作。  
 　　一个多用复用器Selector可以同时轮询多个Channel，由于JDK使用了epoll()代替传统的select实现，所以它并没有最大连接句柄1024/2048的限制，这也意味着只需要一个线程负责Selector的轮询，就可以接入成千上万的客户端。  
-
 
 
 <a id='IOTimePic'></a>
@@ -723,6 +767,20 @@ java.nio.channels.Channel 接口：
 
 **IO模型的对比**  
 ![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/IOCampare.jpg?raw=true)
+
+
+
+<a id='JVM'></a>
+# 五、JVM
+
+
+
+
+
+
+
+
+
 
 
 <a id='reference'></a>
