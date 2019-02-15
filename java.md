@@ -31,10 +31,6 @@
 　　　　<a href='#4threadPool'>3.5 Executor提供的四种线程池</a>  
 　　<a href='#Concurrentexpand'>4.并发拓展</a>  
 　　　　<a href='#SpringAdnThreadSafe'>4.1 Spring与线程安全</a>  
-　　<a href='#JMM'>5.Java内存模型（JMM）</a>  
-　　　　<a href='#MainMemoryAndWorkingMemory'>5.1 主内存和工作内存</a>  
-　　　　<a href='#AtomVisiOrder'>5.2 原子性、可见性和有序性</a>  
-　　　　<a href='#volatile'>5.3 volatile关键字</a>  
 <a href='#javaIO'>四、BIO、NIO、AIO</a>  
 　　<a href='#BIO'>1.BIO</a>  
 　　<a href='#fakeSynIo'>2.伪异步I/O</a>  
@@ -45,7 +41,12 @@
 　　　　<a href='#IOTimePic'>3.4 服务端和客户端的通讯时序图</a>  
 　　　　<a href='#NIOAdvantage'>3.5 NIO的优点</a>  
 　　<a href='#AIO'>4.AIO</a>  
-<a href='#JVM'>五、JVM</a>  
+<a href='#JMM'>五、Java内存模型（Java Memory Model，JMM）</a>  
+　　<a href='#MainMemoryAndWorkingMemory'>1.主内存和工作内存</a>  
+　　<a href='#AtomVisiOrder'>2.原子性、可见性和有序性</a>  
+　　<a href='#happens-before'>3 happens-before原则</a>  
+　　<a href='#volatile'>4.volatile关键字</a>  
+<a href='#JVM'>六、JVM</a>  
 
 <a href='#reference'>reference</a>  
 
@@ -561,8 +562,8 @@ rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理
 
 <a id='threadPoolConf'></a>
 #### 3.2.3 线程池的合理配置
-&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为`$n_{cpu} + 1$ ` 
-　　IO密集型任务，参考值可以设为`$2n_{cpu}$`
+&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为 `$n_{cpu} + 1$`  
+　　IO密集型任务，参考值可以设为 `$2n_{cpu}$`
 
 
 
@@ -610,53 +611,6 @@ Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公
 &emsp;&emsp;Spring中默认的bean都是单例的，那么是怎么保证线程安全的呢？  
 　　是因为我们交由spring管理的大多数对象都是无状态的对象（即没有在bean中声明有状态的实例变量或类变量，平时使用的dao、service、controller等都是无状态对象），我们使用时只是简单的使用，并不涉及到修改bean内部的属性，因此不会出现多个线程修改同一个变量的场景。  
 　　如果我们必须要在bean中声明有状态的实例变量或类变量，让对象变成一个有状态的对象的时候，可以使用ThreahLocal，从而把变量变成改线程私有的。如果定义的实例变量或类变量需要在多个线程之间共享，只能使用synchronized，Lock或CAS来实现同步。
-
-
-<a id='JMM'></a>
-## 5.Java内存模型（JMM）
-
-<a id='MainMemoryAndWorkingMemory'></a>
-### 5.1 主内存和工作内存
-&emsp;&emsp;Java内存模型的主要目标是定义程序中各个变量（这里的变量指的是实例字段、静态字段和构成数组对象的元素，但不包括局部变量，因为后者是线程私有的，不存在竞争问题）的访问规则，它规定了所有的变量都存储在主内存（虚拟机内存的一部分）中，每个线程都有自己的工作内存，线程的工作内存中保存了被该线程使用的变量的主内存副本拷贝，线程对变量的所有操作都必须在工作内存中进行，不能直接读写主内存中的变量，也不能直接访问其他线程工作内存中的变量，线程间变量值的传递需要通过主内存来完成。  
-
-![JMM](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/JMM.jpg?raw=true)
-
-&emsp;&emsp;java内存模型中，会存在缓存一致性问题和指令重排序的问题：在多线程情况下，由于每个线程都有自己的工作内存，而它们又共享同一主内存，当需要操作相同的变量时，有可能导致各自的缓存数据不一致。同时，为了能够充分利用CPU的资源，可能会对代码进行重排序，重排序保证最后的结果和顺序执行的结果相同，但不保证程序中各个语句计算的先后顺序和代码中的顺序一致。  
-　　对于指令的重排序，可以看如下例子：
-```java
-int a = 10;  //1
-int r = 2;   //2
-a = a + 3;   //3
-r = a*a;     //4
-```
-&emsp;&emsp;这段代码有4个语句，那么可能的一个执行顺序是：2  ->  1  ->  3  ->  4。但不可能是：2  ->  1  ->  4  ->  3。因为在进行重排序时会考虑指令之间的数据依赖性，如果一个指令Instruction 2必须用到Instruction 1的结果，那么处理器会保证Instruction 1会在Instruction 2之前执行。  
-　　但在多线程情况下，重排序可能会导致严重的错误：  
-
-```java
-//线程1:
-context = loadContext();   //语句1，读取配置文件
-inited = true;             //语句2，判断配置文件是否读取完毕
-
-//线程2:
-while(!inited ){
-  sleep()
-}
-doSomethingwithconfig(context);
-```
-&emsp;&emsp;上面代码中，由于语句1和语句2没有数据依赖性，因此可能会被重排序。假如发生了重排序，在线程1执行过程中先执行语句2，而此是线程2会以为初始化工作已经完成，那么就会跳出while循环，去执行doSomethingwithconfig(context)方法，而此时context并没有被初始化，就会导致程序出错。  
-
-
-<a id='AtomVisiOrder'></a>
-### 5.2 原子性、可见性和有序性
-
-
-
-
-
-
-<a id='volatile'></a>
-### 5.3 volatile关键字
-
 
 
 
@@ -722,14 +676,14 @@ java.nio.channels.Channel 接口：
 
 获取通道的方式：
     1. Java 针对支持通道的类提供了 getChannel() 方法
-		    本地 IO：
-		    FileInputStream/FileOutputStream
-		    RandomAccessFile
+            本地 IO：
+            FileInputStream/FileOutputStream
+            RandomAccessFile
 
-		    网络IO：
-		    Socket
-		    ServerSocket
-		    DatagramSocket
+            网络IO：
+            Socket
+            ServerSocket
+            DatagramSocket
 
     2. 在 JDK 1.7中的NIO.2针对各个通道提供了静态方法 open()
     3. 在 JDK 1.7中的NIO.2的Files工具类的 newByteChannel()
@@ -770,9 +724,159 @@ java.nio.channels.Channel 接口：
 
 
 
-<a id='JVM'></a>
-# 五、JVM
 
+<a id='JMM'></a>
+# 五、Java内存模型（Java Memory Model，JMM）
+
+<a id='MainMemoryAndWorkingMemory'></a>
+## 1.主内存和工作内存
+&emsp;&emsp;Java内存模型的主要目标是定义程序中各个变量（这里的变量指的是实例字段、静态字段和构成数组对象的元素，但不包括局部变量，因为后者是线程私有的，不存在竞争问题）的访问规则，它规定了所有的变量都存储在主内存（虚拟机内存的一部分）中，每个线程都有自己的工作内存，线程的工作内存中保存了被该线程使用的变量的主内存副本拷贝，线程对变量的所有操作都必须在工作内存中进行，不能直接读写主内存中的变量，也不能直接访问其他线程工作内存中的变量，线程间变量值的传递需要通过主内存来完成。  
+
+![JMM](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/JMM.jpg?raw=true)
+
+&emsp;&emsp;java内存模型中，会存在缓存一致性问题和指令重排序的问题：在多线程情况下，由于每个线程都有自己的工作内存，而它们又共享同一主内存，当需要操作相同的变量时，有可能导致各自的缓存数据不一致。同时，为了能够充分利用CPU的资源，可能会对代码进行重排序，重排序保证最后的结果和顺序执行的结果相同，但不保证程序中各个语句计算的先后顺序和代码中的顺序一致。  
+　　对于指令的重排序，可以看如下例子：
+```java
+int a = 10;  //1
+int r = 2;   //2
+a = a + 3;   //3
+r = a * a;   //4
+```
+&emsp;&emsp;这段代码有4个语句，那么可能的一个执行顺序是：2  ->  1  ->  3  ->  4。但不可能是：2  ->  1  ->  4  ->  3。因为在进行重排序时会考虑指令之间的数据依赖性，如果一个指令Instruction 2必须用到Instruction 1的结果，那么处理器会保证Instruction 1会在Instruction 2之前执行。  
+　　但在多线程情况下，重排序可能会导致严重的错误：  
+
+```java
+//线程1:
+context = loadContext();   //语句1，读取配置文件
+inited = true;             //语句2，判断配置文件是否读取完毕
+
+//线程2:
+while(!inited ){
+  sleep()
+}
+doSomethingwithconfig(context);   // 语句3
+```
+&emsp;&emsp;上面代码中，由于语句1和语句2没有数据依赖性，因此可能会被重排序。假如发生了重排序，在线程1执行过程中先执行语句2，而此是线程2会以为初始化工作已经完成，那么就会跳出while循环，去执行doSomethingwithconfig(context)方法，而此时context并没有被初始化，就会导致程序出错。  
+
+
+<a id='AtomVisiOrder'></a>
+## 2.原子性、可见性和有序性
+&emsp;&emsp;Java内存模型是围绕着在**并发**过程中如何处理原子性、可见性和有序性这3个特征来建立的，下面具体来了解一下这3个特征。  
+
+**1. 原子性**
+
+&emsp;&emsp;在Java中，**对基本数据类型的变量的读取和赋值操作是原子性操作**，即这些操作是不可被中断的，要么执行，要么不执行。可以结合下面例子来理解：  
+
+```java
+x = 10;      //语句1
+y = x;       //语句2
+x++;         //语句3
+x = x + 1;   //语句4
+```
+&emsp;&emsp;在上面四个语句中，只有1是原子性操作。  
+　　语句1是直接将数值10赋值给x，也就是说线程执行这个语句的会直接将数值10写入到工作内存中。  
+　　语句2实际上包含2个操作，它先要去读取x的值，再将y的值写入工作内存，虽然读取x的值以及将y的值写入工作内存这2个操作都是原子性操作，但是合起来就不是原子性操作了。  
+　　同样的，x++和 x = x+1包括3个操作：读取x的值，进行加1操作，写入新的值。  
+　　也就是说，只有简单的读取、赋值（而且必须是将数字赋值给某个变量，变量之间的相互赋值不是原子操作）才是原子操作。如果需要一个更大范围的原子性保证，可以通过同步块——synchronized关键字来实现，**因此在synchronized块之间的操作也具备原子性**。  
+
+**2. 可见性**
+
+&emsp;&emsp;可见性是指当一个线程修改了共享变量的值，其他线程能够立即得知这个修改。在上面第一节提到过主内存和工作内存，我们知道Java内存模型是通过在变量修改后将新值同步回主内存，在变量读取前从主内存刷新变量值这种依赖主内存作为传递媒介的方式来实现可见性的。举个简单的例子，看下面这段代码：  
+
+```java
+//线程1执行的代码
+int i = 0;
+i = 10;
+
+//线程2执行的代码
+j = i;
+```
+&emsp;&emsp;在以上代码中，当线程1执行 i =10 这句时，会先把 i 的初始值加载到线程1的工作内存中，然后赋值为10，如果当某一时刻线程1的工作内存中 i 的值变为10了，却没有立即写入到主存当中，接着线程2执行 j = i，它会先去主存读取 i 的值并加载到线程2的工作内存中，注意此时主内存当中 i 的值还是0，那么就会使得 j 的值为0，而不是10。这就是可见性问题，线程1对变量 i 修改了之后，线程2没有立即看到线程1修改的值。  
+　　**在Java中有3个关键字能实现可见性：synchronized、final和之后介绍的volatile**。同步块的可见性是指：在一个同步代码块中，对某一个变量的操作会在同步代码块结束之前被同步回主内存中。final关键字的可见性是指：被final修饰的字段在构造器中一旦初始化完成，并且构造器没有把“this”的引用传递出去，那在其他线程中就能看见final字段的值。
+
+**3. 有序性**
+
+&emsp;&emsp;在上面第一节主内存和工作内存中提到过指令重排序的问题，在多个线程下重排序可能会影响结果的正确性。  
+　　**Java中提供了synchronized和之后介绍的volatile两个关键字来保证线程之间操作的有序性**。synchronized的有序性是由“一个变量在同一时刻只允许一个线程对其进行操作”这条规则获得的，这条规则决定了持有同一个锁的两个同步代码块只能串行地进入。  
+
+**注意：通过上面的介绍可以知道，synchronized关键字可以同时解决原子性、可见性和有序性这3个特征；而volatile只能解决
+可见性和有序性，并不能解决原子性的问题。**  
+
+
+<a id='happens-before'></a>
+## 3.happens-before原则
+&emsp;&emsp;除了依靠volatile和synchronized来实现有序性外，Java内存模型还具备一些先天的“有序性”，即不需要通过任何手段就能够得到保证的有序性，这个通常也称为 happens-before原则。如果两个操作的执行次序无法从happens-before原则推导出来，那么它们就不能保证它们的有序性，虚拟机可以随意地对它们进行重排序。happens-before原则具体内容如下：  
+
+| 规则 | 内容 |
+| --- | --- | 
+| 程序次序规则 | 一个线程内，按照代码顺序，书写在前面的操作先行发生于书写在后面的操作。|  
+| 管程锁定规则 | 一个unLock操作先行发生于后面对同一个锁额lock操作。|  
+| volatile变量规则 | 对一个volatile变量的写操作先行发生于后面对这个变量的读操作。|  
+| 线程启动规则 | Thread对象的start()方法先行发生于此线程的每个一个动作。|  
+| 线程终止规则 | 线程中所有的操作都先行发生于对此线程的终止检测，我们可以通过Thread.join()方法结束、Thread.isAlive()的返回值手段检测到线程已经终止执行。|  
+| 线程中断规则 | 对线程interrupt()方法的调用先行发生于被中断线程的代码检测到中断事件的发生，可以通过Thread.interrupted()方法检测到是否有中断发生。|  
+| 对象终结规则 | 一个对象的初始化完成（构造函数执行结束）先行发生于它的finalize()方法的开始。|  
+| 传递性 | 如果操作A先行发生于操作B，而操作B又先行发生于操作C，则可以得出操作A先行发生于操作C的结论。  
+
+
+<a id='volatile'></a>
+## 4.volatile关键字
+
+&emsp;&emsp;当一个变量定义为volatile后，它将具备2种特性：  
+
+1.  **保证了不同线程对这个变量进行操作时的可见性**。即一个线程修改了某个变量的值，这新值对其他线程来说是立即可见的。和普通变量一样，volatile变量在修改后也需要将新值同步回主内存，在读取时也需要从主内存刷新变量值，即依赖主内存作为传递媒介的方式来实现可见性。但volatile变量和普通变量不同的是volatile的特殊规则保证了新值能立即同步到主内存，及每次使用前立即从主内存刷新，普通变量并不能保证这一点。  
+2. **禁止指令重拍序优化，即能够保证有序性**。volatile关键字禁止指令重排序有两层意思：
+ &emsp;&emsp;1）当程序执行到volatile变量的读操作或者写操作时，在其前面的操作的更改肯定全部已经进行，且结果已经对后面的操作可见，在其后面的操作肯定还没有进行。  
+　　2）在进行指令优化时，不能将在对volatile变量访问的语句放在其后面执行，也不能把volatile变量后面的语句放到其前面执行。
+　　在之前的例子中，如果inited没有被volatile修饰，可能由于指令重拍序的优化，导致语句2在语句1之前执行，此时线程2启动，直接执行语句3可能会出现错误。而用volatile修饰inited则能够避免此类情况的发生。
+```java
+//线程1:
+context = loadContext();   //语句1，读取配置文件
+inited = true;                    //语句2，判断配置文件是否读取完毕
+
+//线程2:
+while(!inited ){
+  sleep()
+}
+doSomethingwithconfig(context);   // 语句3
+```
+
+ &emsp;&emsp;**注意：volatile并不能保证原子性**，即不能保证基于volatile变量的运算在并发下是安全的，看下面一个例子：
+ ```java
+public class Test {
+    public static volatile int race = 0;
+    
+    public  void increase() {
+        race++;
+    }
+    
+    public static void main(String[] args) {
+        final Test test = new Test();
+        for(int i=0;i<10;i++){
+            new Thread(){
+                public void run() {
+                    for(int j=0 ; j<1000 ; j++)
+                        test.increase();
+                };
+            }.start();
+        }
+        while(Thread.activeCount()>1)  //保证所有累加线程结束
+            Thread.yield();
+        System.out.println(test.race);
+    }
+}
+ ```
+ &emsp;&emsp;在前面已经提到过，自增操作是不具备原子性的，它包括读取变量的原始值、进行加1操作、写入工作内存。那么就是说自增操作的三个子操作可能会分割开执行，就有可能导致下面这种情况出现：
+　　假如某个时刻变量race的值为10，线程1对变量进行自增操作，线程1先读取了变量race的原始值，然后线程1被阻塞了。
+　　此时线程2对变量进行自增操作，线程2也去读取变量race的原始值，发现race的值时10，然后进行加1操作，并把11写入工作内存，最后写入主存。
+　　接着线程1接着进行加1操作，由于已经读取了race的值，注意此时在线程1的工作内存中race的值仍然为10，所以线程1对inc进行加1操作后race的值为11，然后将11写入工作内存，最后写入主存。
+　　那么两个线程分别进行了一次自增操作后，inc只增加了1。
+
+
+
+
+<a id='JVM'></a>
+# 六、JVM
 
 
 
@@ -787,5 +891,8 @@ java.nio.channels.Channel 接口：
 # reference
 [一、BIO、NIO、AIO通信机制理解](https://blog.csdn.net/l_kanglin/article/details/71531761)  
 [Java 网络IO编程总结（BIO、NIO、AIO均含完整实例代码）](https://blog.csdn.net/anxpp/article/details/51512200)  
+[Java并发编程：volatile关键字解析](https://www.cnblogs.com/dolphin0520/p/3920373.html)  
+
+《深入理解Java虚拟机——JVM最佳特性与高级实践》
 
 
