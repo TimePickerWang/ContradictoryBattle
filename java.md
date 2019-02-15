@@ -566,7 +566,6 @@ rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理
 　　IO密集型任务，参考值可以设为 `$2n_{cpu}$`
 
 
-
 <a id='threadPoolStatus'></a>
 ### 3.3 线程池的状态
 ![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/pool.jpg?raw=true)
