@@ -561,8 +561,8 @@ rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理
 
 <a id='threadPoolConf'></a>
 #### 3.2.3 线程池的合理配置
-&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为$n_{cpu} + 1$ 
-　　IO密集型任务，参考值可以设为$2n_{cpu}$
+&emsp;&emsp;CPU密集型任务，就要尽量压榨CPU，参考值可以设为 `$n_{cpu} + 1$`  
+　　IO密集型任务，参考值可以设为 `$2n_{cpu}$`  
 
 
 
