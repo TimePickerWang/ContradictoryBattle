@@ -23,11 +23,10 @@
 　　<a href='#threadPool'>3.线程池</a>  
 　　　　<a href='#threadPoolAdv'>3.1 线程池的优点</a>  
 　　　　<a href='#ThreadPoolExecutor'>3.2 ThreadPoolExecutor</a>  
-　　　　　　<a href='#corePoolSizeRela'>3.2.1 corePoolSize、maximumPoolSize和workQueue间的关系</a>  
+　　　　　　<a href='#corePoolSizeRela'>3.2.1 线程池执行流程</a>  
 　　　　　　<a href='#workQueue'>3.2.2 workQueue的三种处理方式</a>  
 　　　　　　<a href='#threadPoolConf'>3.2.3 线程池的合理配置</a>  
 　　　　<a href='#threadPoolStatus'>3.3 线程池的状态</a>  
-　　　　<a href='#threadPoolMethod'>3.4 ThreadPoolExecutor提供的方法</a>  
 　　　　<a href='#4threadPool'>3.5 Executor提供的四种线程池</a>  
 　　<a href='#Concurrentexpand'>4.并发拓展</a>  
 　　　　<a href='#SpringAdnThreadSafe'>4.1 Spring与线程安全</a>  
@@ -469,9 +468,9 @@ public abstract class AbstractQueuedSynchronizer
 ![CLH](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/clh.jpg?raw=true)
 
 &emsp;&emsp;AbstractQueuedSynchronizer内部维持了一个上图所示的等待队列和一个state变量，等待队列由上面代码中的Node对象组成，其实是一个双向链表。现在以非公平的ReentrantLock为例，一般的加锁流程如下：  
-　　1.假设现在没有进行任何加锁的操作，某时刻A线程调用ReentrantLock的lock()方法进行加锁，state最初为0，首先利用CAS操作将state变为1，并将当前线程设置为独占线程。  
+　　1.假设现在没有进行任何加锁的操作，某时刻A线程调用ReentrantLock的lock()方法进行加锁，state最初为0，首先利用CAS操作将state变为1，并将模式设置为独占锁。  
 　　2.当再有线程来进行加锁操作时，先会判断state是否为0，为0则进行第1部操作。  
-　　这时很显然state不为0，接着再判断此时的此事的线程是否是当前的独占线程，如果是，即现在进行加锁的线程仍然是A线程，则把state加1，这也说明为什么ReentrantLock是可从入锁。释放锁时，直到state的值变为0时，锁才能够被完全释放。  
+　　这时很显然state不为0，接着再判断此时的线程是否是当前持有独占锁的线程，如果是，即现在进行加锁的线程仍然是A线程，则把state加1，这也说明为什么ReentrantLock是可从入锁。释放锁时，直到state的值变为0时，锁才能够被完全释放。  
 　　如果现在加锁的是另一个线程B，则new一个Node对象，并将线程B赋值为Node对象的thread字段。接着会判断此时等待队列的尾节点是否为null，如果不为null，则将该节点插入到等待队列的尾部。很显然此时等待队列的尾节点就是null，因此会new一个头节点，此时头节点就是尾节点，然后该Node赋值为头节点的后继节点和队列的尾节点，当再有新的线程尝试加锁时会直接在队列的尾部添加新的Node。
 
 
@@ -518,28 +517,49 @@ public abstract class AbstractQueuedSynchronizer
 **3.提高线程的可管理性**。线程是稀缺资源，如果无限制的创建，不仅会消耗系统资源，还会降低系统的稳定性，因此，需要使用线程池来管理线程。  
 
 
-
-
 <a id='ThreadPoolExecutor'></a>
 ### 3.2 ThreadPoolExecutor
-**ThreadPoolExecutor的重要参数**：
+&emsp;&emsp;创建线程池一般是利用ThreadPoolExecutor来创建的，先来看下它的构造函数：
 
 ```java
-corePoolSize:核心线程数量
-maximumPoolSize:线程最大线程数
-workQueue:阻塞队列，存储等待执行的任务，很重要，会对线程池运行过程产生重大影响
+public ThreadPoolExecutor(int corePoolSize,
+                              int maximumPoolSize,
+                              long keepAliveTime,
+                              TimeUnit unit,
+                              BlockingQueue<Runnable> workQueue,
+                              ThreadFactory threadFactory,
+                              RejectedExecutionHandler handler) {
+    ...
+    ...
+}
 
-keepAliveTime:线程没有任务执行时最多保持多久时间终止（如果线程池中的线程数大于corePoolSize，如果没有新的任务提交，核心线程数之外的线程不会立即销毁，会等待keepAliveTime）
-unit:keepAliveTime的时间单位
-threadFactory:线程工厂，用来创建线程
+ThreadPoolExecutor中的各参数含义如下：
 
-rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理任务时候，有四个策略：
-              1.AbortPolicy          直接拒绝任务，并抛出RejectedExecutionException异常（默认）
-              2.CallerRunsPolicy     用调用者所在的线程执行任务
-              3.DiscardOldestPolicy  丢弃掉阻塞队列中存放时间最久的任务，执行当前任务
-              4.DiscardPolicy        直接丢弃该任务
+corePoolSize : 核心线程数量
+maximumPoolSize : 线程最大线程数
+keepAliveTime : 线程没有任务执行时最多保持多久时间终止（如果线程池中的线程数大于corePoolSize，如果没有新的任务提交，核心线程数之外的线程不会立即销毁，会等待keepAliveTime）
+unit : keepAliveTime的时间单位
+workQueue : 阻塞队列，存储等待执行的任务，很重要，会对线程池运行过程产生重大影响
+threadFactory : 线程工厂，用来创建线程
+handler : 饱和策略，如果workQueue满了，且没有空闲线程处理任务时候，有四个策略：
+          1.AbortPolicy          直接拒绝任务，并抛出RejectedExecutionException异常（默认）
+          2.CallerRunsPolicy     用调用者所在的线程执行任务
+          3.DiscardOldestPolicy  丢弃掉阻塞队列中存放时间最久的任务，执行当前任务
+          4.DiscardPolicy        直接丢弃该任务
 ```
+**ThreadPoolExecutor提供的方法**：
 
+```java
+execute():                 提交任务，交给线程池执行
+submit():                  提交任务，能够返回执行结果（execute + Future）
+shutdown():                关闭线程池，等待任务都执行完
+shutdownNow():             关闭线程池，不等待任务执行完
+
+getTaskCount():            线程池已执行和未执行的任务总数
+getCompletedTaskCount():   已完成的任务数量
+getPoolSize():             线程池当前的线程数量
+getActiveCount():          当前线程池中正在执行任务的线程数量
+```
 
 <a id='corePoolSizeRela'></a>
 #### 3.2.1 线程池执行流程
@@ -566,40 +586,37 @@ rejectHandler:饱和策略，如果workQueue满了，且没有空闲线程处理
 　　IO密集型任务，参考值可以设为 `$2n_{cpu}$`
 
 
-
 <a id='threadPoolStatus'></a>
 ### 3.3 线程池的状态
 ![pool](https://github.com/TimePickerWang/ContradictoryBattle/blob/master/images/pool.jpg?raw=true)
+RUNNING : 运行状态，可以接受任务执行队列里的任务
 
 SHUTDOWN：当线程池处于该状态时，不会接收新的任务，但会处理workQueue中阻塞的任务。在线程池处于RUNNINT状态时，调用shutdown()方法会使线程池进入该状态。
 
-STOP：当线程池处于该状态时，不接受新任务，也不处理workQueue中的任务，会中断正在处理任务的线程。在线程池处于RUNNINT、SHUTDOWN状态时，调用shutdownNow()方法会使线程池进入该状态。
+STOP：当线程池处于该状态时，不接受新任务，同事抛弃workQueue中的任务，会中断正在处理任务的线程。在线程池处于RUNNINT、SHUTDOWN状态时，调用shutdownNow()方法会使线程池进入该状态。
 
+TIDYING：所有任务执行完毕，在调用shutdown() / shutdownNow()时都会尝试更新为该状态。
 
-<a id='threadPoolMethod'></a>
-### 3.4 ThreadPoolExecutor提供的方法
-
-```java
-execute():                 提交任务，交给线程池执行
-submit():                  提交任务，能够返回执行结果（execute + Future）
-shutdown():                关闭线程池，等待任务都执行完
-shutdownNow():             关闭线程池，不等待任务执行完
-
-getTaskCount():            线程池已执行和未执行的任务总数
-getCompletedTaskCount():   已完成的任务数量
-getPoolSize():             线程池当前的线程数量
-getActiveCount():          当前线程池中正在执行任务的线程数量
-```
-
+TERMINATED：终止状态，当执行terminated()后会更新为这个状态。
 
 <a id='4threadPool'></a>
-### 3.5 Executor提供的四种线程池
+### 3.4 Executor提供的四种线程池
+&emsp;&emsp;Executor提供的四种线程池其实还是通过利用ThreadPoolExecutor来创建的，只是传递的参数不同而已，如下：
+
 ```java
-Executor.newCachedThreadPool:创建一个可缓存的线程池，若线程池的大小超过了需要，可以灵活回收线程
-Executor.newFixedThreadPool:创建一个大小固定的线程池，可以控制线程的最大并发数
+Executor.newCachedThreadPool:创建一个可缓存的线程池，若线程池的大小超过了需要，可以灵活回收线程。
+public static ExecutorService newCachedThreadPool() {
+        return new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+                                      60L, TimeUnit.SECONDS,
+                                      new SynchronousQueue<Runnable>());
+}
+
+Executor.newFixedThreadPool:创建一个大小固定的线程池，可以控制线程的最大并发数。
+
 Executor.newScheduledThreadPool:创建一个大小固定的线程池，支持定时及周期性的执行
+
 Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公用的线程执行任务，保证指定任务按
-                             指定顺序（先进先出、优先级等）执行
+                             指定顺序（先进先出、优先级等）执行。
 ```
 
 
@@ -777,7 +794,7 @@ x = x + 1;   //语句4
 　　语句1是直接将数值10赋值给x，也就是说线程执行这个语句的会直接将数值10写入到工作内存中。  
 　　语句2实际上包含2个操作，它先要去读取x的值，再将y的值写入工作内存，虽然读取x的值以及将y的值写入工作内存这2个操作都是原子性操作，但是合起来就不是原子性操作了。  
 　　同样的，x++和 x = x+1包括3个操作：读取x的值，进行加1操作，写入新的值。  
-　　也就是说，只有简单的读取、赋值（而且必须是将数字赋值给某个变量，变量之间的相互赋值不是原子操作）才是原子操作。如果需要一个更大范围的原子性保证，可以通过同步块——synchronized关键字来实现，**因此在synchronized块之间的操作具备原子性**。  
+　　也就是说，只有简单的读取、赋值（而且必须是将数字赋值给某个变量，变量之间的相互赋值不是原子操作）才是原子操作。如果需要一个更大范围的原子性保证，可以通过同步块——synchronized关键字来实现，**因此在synchronized块之间的操作也具备原子性**。  
 
 **2. 可见性**
 
@@ -831,8 +848,8 @@ j = i;
 　　在之前的例子中，如果inited没有被volatile修饰，可能由于指令重拍序的优化，导致语句2在语句1之前执行，此时线程2启动，直接执行语句3可能会出现错误。而用volatile修饰inited则能够避免此类情况的发生。  
 ```java
 //线程1:
-context = loadContext();   //语句1，读取配置文件
-inited = true;                    //语句2，判断配置文件是否读取完毕
+context = loadContext();    //语句1，读取配置文件
+inited = true;              //语句2，判断配置文件是否读取完毕
 
 //线程2:
 while(!inited ){
