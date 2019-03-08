@@ -30,6 +30,7 @@
 　　　　<a href='#4threadPool'>3.5 Executor提供的四种线程池</a>  
 　　<a href='#Concurrentexpand'>4.并发拓展</a>  
 　　　　<a href='#SpringAdnThreadSafe'>4.1 Spring与线程安全</a>  
+　　　　<a href='#ThreadLocal'>4.2 ThreadLocal</a>  
 <a href='#javaIO'>四、BIO、NIO、AIO</a>  
 　　<a href='#BIO'>1.BIO</a>  
 　　<a href='#fakeSynIo'>2.伪异步I/O</a>  
@@ -629,6 +630,107 @@ Executor.newSingleThreadPool:创建一个单线程化的线程池，只会用公
 　　是因为我们交由spring管理的大多数对象都是无状态的对象（即没有在bean中声明有状态的实例变量或类变量，平时使用的dao、service、controller等都是无状态对象），我们使用时只是简单的使用，并不涉及到修改bean内部的属性，因此不会出现多个线程修改同一个变量的场景。  
 　　如果我们必须要在bean中声明有状态的实例变量或类变量，让对象变成一个有状态的对象的时候，可以使用ThreahLocal，从而把变量变成改线程私有的。如果定义的实例变量或类变量需要在多个线程之间共享，只能使用synchronized，Lock或CAS来实现同步。
 
+<a id='ThreadLocal'></a>
+### 4.2 ThreadLocal
+&emsp;&emsp;和synchronzed或lock通过控制对临界区资源的同步顺序来解决线程安全的问题不同，ThreadLocal通过“空间换时间”的方式来解决线程安全问题。从ThreadLocal这个类名可以顾名思义的进行理解：表示线程的“本地变量”，即每个线程都拥有该变量副本，达到人手一份的效果，各用各的这样就可以避免共享资源的竞争。  
+
+```java
+public class Thread implements Runnable {
+    ...
+    ThreadLocal.ThreadLocalMap threadLocals = null;
+    ...
+}
+```
+&emsp;&emsp;我们通过ThreadLocal进行的操作其实是对一个map(即上面的ThreadLocalMap，是ThreadLocal的静态内部类)的操作，该map在每个线程内都存在，且与其他线程互不干扰，ThreadLocalMap的部分代码如下：  
+
+```java
+static class ThreadLocalMap {
+    static class Entry extends WeakReference<ThreadLocal<?>> {
+        Object value;
+
+        Entry(ThreadLocal<?> k, Object v) {
+            super(k);
+            value = v;
+        }
+    }
+
+    private static final int INITIAL_CAPACITY = 16; // 初始容量
+    private Entry[] table;  // map
+    private int threshold;  // 扩容阈值
+
+    private void setThreshold(int len) {  // 扩容阈值为当map容量的2/3
+        threshold = len * 2 / 3;
+    }
+
+    private static int nextIndex(int i, int len) {  // 在产生哈希冲突时会调用此方法
+        return ((i + 1 < len) ? i + 1 : 0);
+    }
+
+    // 构造方法，在通过ThreadLocal添加第一个元素时候调用
+    ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
+        table = new Entry[INITIAL_CAPACITY];
+        int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
+        table[i] = new Entry(firstKey, firstValue);
+        size = 1;
+        setThreshold(INITIAL_CAPACITY);
+    }
+    ...
+}
+```
+&emsp;&emsp;该map其实就是一个Entry数组，可以把Entry当作是一个键值对，其key是当前进行操作的ThreadLocal实例，**是一个“弱引用”**，value是需要操作的数据。可以将ThreadLocalMap和HashMap进行对比，虽然同为哈希表且初始容量都是16，不过它们有两个很大的不同：  
+　　1. 扩容阈值threshold的增长方式不同，HashMap的threshold增长为之前的2倍，而ThreadLocalMap增长为扩容后哈希表容量的2/3。  
+　　2. 解决哈希冲突的方式不同，HashMap是通过“拉链法”，而ThreadLocalMap则利用的是“开放定地址法”。之所以采用不同的方式主要是因为：在 ThreadLocalMap 中的散列值分散的十分均匀，很少会出现冲突。并且ThreadLocalMap经常需要清除无用的对象，使用纯数组更加方便。(引自[并发容器之ThreadLocal](https://juejin.im/post/5aeeb22e6fb9a07aa213404a))  
+　　下面看一下向ThreadLocalMap添加元素的流程：  
+
+```java
+public class ThreadLocal<T> {
+    ...
+        
+    public void set(T value) {
+        Thread t = Thread.currentThread();  //获取当前线程
+        ThreadLocalMap map = getMap(t);  // 调用下面的方法
+        if (map != null)
+            map.set(this, value);  // 调用下面ThreadLocalMap类的set方法
+        else
+            createMap(t, value); // map为空则创建一个ThreadLocalMap实例，就是通过上面ThreadLocalMap的构造方法进行创建
+    }
+    
+    ThreadLocalMap getMap(Thread t) {
+        return t.threadLocals; // 返回当前线程Thread对象的threadLocals变量，本节最开始的代码块提到过
+    }
+    ...
+}
+
+static class ThreadLocalMap {
+    private void set(ThreadLocal<?> key, Object value) {
+        Entry[] tab = table;
+        int len = tab.length;  // 哈希表当前的容量（长度）
+        int i = key.threadLocalHashCode & (len-1);
+        
+        // 通过“开放定地址法”解决哈希冲突，nextIndex()方法在之前的代码块提到过
+        for (Entry e = tab[i];
+             e != null;
+             e = tab[i = nextIndex(i, len)]) {
+            ThreadLocal<?> k = e.get();
+            if (k == key) {
+                e.value = value;
+                return;
+            }
+            if (k == null) {
+                replaceStaleEntry(key, value, i);
+                return;
+            }
+        }
+        tab[i] = new Entry(key, value); // 找到tab[i]==null的位置进行赋值
+        int sz = ++size;
+        if (!cleanSomeSlots(i, sz) && sz >= threshold)
+            rehash();  // 扩容，容量增大为当前的2倍，threshold阈值增大为哈希表容量的2/3
+    }
+}
+```
+&emsp;&emsp;步骤注释里都写得很清楚，就不过多进行叙述了。需要注意的是：**Entry里的key为什么是弱引用？**  
+　　要知道弱引用关联的对象只会生存到下一次GC前，如果key使用强引用，当把ThreadLocal实例赋为null时（threadLocalInstance = null），对象并不能被回收，因为还存在ThreadRef -> Thread -> ThreadLocalMap -> Entry -> key 的引用链，直到该线程被销毁，而这个线程是可能被放到线程池中不会被销毁的，从而就产生了内存泄漏。  
+　　将key转为弱引用，如果一个ThreadLocal没有外部的强引用来引用它，系统在GC时，这个ThreadLoacl一定会被回收。然而还是有内存泄漏的可能，因为ThreadLocalMap中会出现key为null的Entry，如果线程不结束，这些Entry的value就会存在一条强引用链：ThreadRef -> Thread -> ThreadLocalMap -> Entry ->value，其value永远无法回收，从而造成内存泄漏，好在ThreadLocal的get()、set()、remove()方法会对key为null的value进行清除，但并不能保证不会有内存泄漏：1. 使用了static的ThreadLocal，延长了ThreadLocal的生命周期;2. 分配了ThreadLocal，但不再调用get()、set()、remove()方法。因此，使用ThreadLocal防止内存泄漏的方式是在使用完后调用它的remove()方法。
 
 
 
@@ -909,6 +1011,7 @@ public class Test {
 [一、BIO、NIO、AIO通信机制理解](https://blog.csdn.net/l_kanglin/article/details/71531761)  
 [Java 网络IO编程总结（BIO、NIO、AIO均含完整实例代码）](https://blog.csdn.net/anxpp/article/details/51512200)  
 [Java并发编程：volatile关键字解析](https://www.cnblogs.com/dolphin0520/p/3920373.html)  
+[并发容器之ThreadLocal](https://juejin.im/post/5aeeb22e6fb9a07aa213404a)
 
 《深入理解Java虚拟机——JVM最佳特性与高级实践》
 
