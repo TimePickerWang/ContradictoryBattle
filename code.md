@@ -1,7 +1,7 @@
 <a href='#moreExtends'>一、多继承的实现(通过内部类)</a>  
 <a href='#singleton'>二、单例模式</a>  
 　　<a href='#hungryGuy'>1.饿汉式</a>  
-　　<a href='#lazyGuy'>2.懒汉式-双重同步锁</a>  
+　　<a href='#lazyGuy'>2.懒汉式-双重校验锁（DCL）</a>  
 　　<a href='#enum'>3.枚举</a>  
 　　<a href='#innerClass'>4.静态内部类</a>  
 <a href='#deadLock'>三、 死锁</a>  
@@ -79,7 +79,7 @@ public class Singleton {
 ```
 
 <a id='lazyGuy'></a>
-## 2.懒汉式-双重同步锁
+## 2.懒汉式-双重校验锁（DCL）
 ```java
 public class Singleton {
 	// 私有构造函数
