@@ -3,6 +3,7 @@
 　　<a href='#hungryGuy'>1.饿汉式</a>  
 　　<a href='#lazyGuy'>2.懒汉式-双重同步锁</a>  
 　　<a href='#enum'>3.枚举</a>  
+　　<a href='#innerClass'>4.静态内部类</a>  
 <a href='#deadLock'>三、 死锁</a>  
 <a href='#proAndCon'>四、生产者消费者</a>  
 　　<a href='#waitNotify'>1.wait-notify</a>  
@@ -65,77 +66,90 @@ public class Phone {
 ## 1.饿汉式
 ```java
 public class Singleton {
-    // 私有构造函数
-    private Singleton() {  }
+	// 私有构造函数
+	private Singleton() {
+	}
 
-    // 单例对象
-    private static Singleton instance = new Singleton();
+	private static Singleton instance = new Singleton();
 
-    // 静态的工厂方法
-    public static Singleton getInstance() {
-        return instance;
-    }
+	public static Singleton getInstance() {
+		return instance;
+	}
 }
 ```
-
 
 <a id='lazyGuy'></a>
 ## 2.懒汉式-双重同步锁
 ```java
 public class Singleton {
-    // 私有构造函数
-    private Singleton() {
+	// 私有构造函数
+	private Singleton() {
+	}
 
-    }
+	private volatile static Singleton instance = null;
 
-    // 1、memory = allocate() 分配对象的内存空间
-    // 2、ctorInstance() 初始化对象
-    // 3、instance = memory 设置instance指向刚分配的内存
-
-    // 单例对象 volatile + 双重检测机制 -> 禁止指令重排
-    private volatile static Singleton instance = null;
-
-    // 静态的工厂方法
-    public static Singleton getInstance() {
-        if (instance == null) { // 双重检测机制        // B
-            synchronized (Singleton.class) { // 同步锁
-                if (instance == null) {
-                    instance = new Singleton(); // A - 3
-                }
-            }
-        }
-        return instance;
-    }
+	// 静态的工厂方法
+	public static Singleton getInstance() {
+		if (instance == null) {
+			synchronized (Singleton.class) {
+				if (instance == null) {
+					instance = new Singleton();
+				}
+			}
+		}
+		return instance;
+	}
 }
+
 ```
 
 <a id='enum'></a>
 ## 3.枚举
 ```java
 public class Singleton {
-    // 私有构造函数
-    private Singleton() { }
+	// 私有构造函数
+	private Singleton() {
+	}
 
-    public static Singleton getInstance() {
-        return Singleton.INSTANCE.getInstance();
-    }
+	public static Singleton getInstance() {
+		return SingletonEnum.INSTANCE.getInstance();
+	}
 
-    private enum Singleton {
-        INSTANCE;
+	private enum SingletonEnum {
+		INSTANCE;
 
-        private Singleton singleton;
+		private Singleton instance;
 
-        // JVM保证这个方法绝对只调用一次
-        Singleton() {
-            singleton = new Singleton();
-        }
+		// JVM保证这个方法绝对只调用一次
+		SingletonEnum() {
+			this.instance = new Singleton();
+		}
 
-        public Singleton getInstance() {
-            return singleton;
-        }
-    }
+		public Singleton getInstance() {
+			return instance;
+		}
+	}
 }
 ```
+
+<a id='innerClass'></a>
+## 4.静态内部类
+```java
+public class Singleton {
+	private Singleton() {
+	}
+
+	// 静态内部类
+	private static class SingletonInstance {
+		private static Singleton INSTANCE = new Singleton();
+	}
+
+	public static Singleton getInstance() {
+		return SingletonInstance.INSTANCE;
+	}
+}
+```
+【注】：可以参考[深入理解单例模式：静态内部类单例原理](https://blog.csdn.net/mnb65482/article/details/80458571)  
 
 
 <a id='deadLock'></a>
