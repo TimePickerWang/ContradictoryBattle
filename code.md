@@ -140,12 +140,12 @@ public class Singleton {
 	}
 
 	// 静态内部类
-	private static class SingletonInstance {
-		private static Singleton INSTANCE = new Singleton();
+	private static class SingletonHolder {
+		private static final Singleton INSTANCE = new Singleton();
 	}
 
 	public static Singleton getInstance() {
-		return SingletonInstance.INSTANCE;
+		return SingletonHolder.INSTANCE;
 	}
 }
 ```
